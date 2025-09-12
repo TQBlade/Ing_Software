@@ -29,12 +29,10 @@ Este sistema tiene como propósito garantizar el control seguro, eficiente y aut
 
 | Nombre                      | Rol                        |
 |----------------------------|-----------------------------|
-| Kevin Medina               | Analista / Desarrollador    |
 | Asly Acuña                 | Analista / Desarrollador    |
-| Alejandro Morales          | Analista / Desarrollador    |
 | Owen Fuentes               | Analista / Desarrollador    |
 | Erick Usuche               | Analista / Desarrollador    |
-
+| Felipe Mantilla            | Analista / Desarrollador    |
 ---
 
 ## 📁 Estructura del Proyecto
@@ -109,5 +107,5 @@ Los documentos Word correspondientes a cada tarea se encuentran organizados por 
 
 ## 👨‍🏫 Autor y Docente
 
-Proyecto desarrollado para la asignatura Ingeniería de Software I
+Proyecto desarrollado para la asignatura Ingeniería de Software
 **Docente:** [Ing. Fanny Casadiego]
