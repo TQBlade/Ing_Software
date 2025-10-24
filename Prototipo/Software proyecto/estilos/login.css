@@ -1,0 +1,126 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f8f8; /* Fondo claro general */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.login-container {
+    background-color: #f8d0d5; /* Color de fondo similar al del PDF (rojo pálido) */
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.label-text {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #444; /* Color de texto oscuro */
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+/* Estilo del grupo de entrada (caja con borde rojo) */
+.input-group {
+    display: flex;
+    align-items: center;
+    border: 3px solid #b32537; /* Borde rojo oscuro */
+    background-color: #f7e8e9; /* Fondo muy claro dentro de la caja */
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    height: 50px; /* Altura de la caja */
+}
+
+.icon {
+    color: #b32537; /* Icono rojo oscuro */
+    font-size: 24px;
+    margin-right: 15px;
+}
+
+.login-input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 1.2em;
+    outline: none; /* Quitar el borde de enfoque por defecto */
+    color: #333;
+}
+
+/* Estilo para la sección de "Rol selecto" */
+.rol-selecto-label {
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.role-selection {
+    display: flex;
+    gap: 30px; /* Espacio entre las opciones de radio */
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.radio-label {
+    font-size: 1.1em;
+    color: #444;
+}
+
+/* Estilo de los radio buttons */
+input[type="radio"] {
+    /* Ocultar el radio button nativo */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    
+    /* Recrear el estilo del radio button */
+    width: 20px;
+    height: 20px;
+    border: 2px solid #b32537; /* Borde rojo */
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    top: 5px;
+    margin-right: 5px; /* Espacio antes de la etiqueta */
+    cursor: pointer;
+}
+
+/* Círculo interno para el estado 'checked' */
+input[type="radio"]:checked:before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background: #b32537; /* Color de relleno rojo */
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Estilo del botón de Acceder (asumiendo un botón debajo de la selección de rol) */
+.access-button {
+    background-color: #b32537; /* Color principal rojo */
+    color: white;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.access-button:hover {
+    background-color: #8c1e29;
+}

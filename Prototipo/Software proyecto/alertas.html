@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCar - Alertas</title>
+    <link rel="stylesheet" href="estilos/home.css"> <link rel="stylesheet" href="estilos/alertas.css"> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="main-container">
+        <aside class="sidebar">
+            <h1 class="logo">Smart Car</h1>
+            <nav class="nav-menu">
+                <ul>
+                    <li><i class="fas fa-list-alt"></i> Historial de Accesos</li>
+                    <li class="active"><i class="fas fa-bell"></i> Alertas</li>
+                    <li><i class="fas fa-car"></i> Gestión de vehículos</li>
+                    <li><i class="fas fa-calendar-alt"></i> Calendario</li>
+                    <li class="nav-button"><i class="fas fa-check-circle"></i> Validar acceso vehicular</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header class="content-header">
+                <h2>Alertas</h2>
+            </header>
+
+            <div class="alerts-layout">
+                <div class="alerts-table-section">
+                    <div class="table-container">
+                        <table class="alerts-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Alerta</th>
+                                    <th>Vehículo</th>
+                                    <th>Placa</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Mal parqueado</td>
+                                    <td>Carro</td>
+                                    <td>ΧΥΡ-256</td>
+                                    <td>23/5/2025</td>
+                                </tr>
+                                <tr class="selected-row">
+                                    <td>Pico y placa</td>
+                                    <td>Moto</td>
+                                    <td>JIU-777</td>
+                                    <td>25/6/2025</td>
+                                </tr>
+                                <tr>
+                                    <td>Infracción</td>
+                                    <td>Carro</td>
+                                    <td>AWS-623</td>
+                                    <td>29/6/2025</td>
+                                </tr>
+                                <tr>
+                                    <td>Choque</td>
+                                    <td>Moto</td>
+                                    <td>KVA-654</td>
+                                    <td>1/9/2025</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination-container">
+                        <button class="nav-btn">Anterior</button>
+                        <span class="page-info">1/10</span>
+                        <button class="nav-btn">Siguiente</button>
+                    </div>
+                </div>
+
+                <div class="alert-details-section">
+                    <div class="card alert-details-card">
+                        <h3>Detalle de la Alerta</h3>
+                        <div class="detail-item">
+                            <span class="detail-label">Hora:</span>
+                            <span class="detail-value">14:00-14:15</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Ubicación:</span>
+                            <span class="detail-value">XXXXXXXXXXXXXXXXXXXXXXXX</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Cámara ID:</span>
+                            <span class="detail-value">XXXXX-XXXXXXX</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Código:</span>
+                            <span class="detail-value">XXXXXXX</span>
+                        </div>
+                    </div>
+
+                    <div class="card novelty-card">
+                        <h3>Novedades</h3>
+                        <p>Escribir novedades sobre las alertas</p>
+                        <textarea class="novelty-input" rows="5"></textarea>
+                        <button class="save-button">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

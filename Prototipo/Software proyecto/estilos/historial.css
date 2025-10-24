@@ -1,0 +1,146 @@
+:root {
+    --main-red: #b32537;
+    --light-bg: #f5f5f5;
+    --card-bg: #ffffff;
+    --denied-red: #b32537;
+    --allowed-green: #28a745;
+    --header-color: #333;
+}
+
+/* Reutilización del estilo principal de dashboard para el layout */
+/* Asegúrate de que los estilos del dashboard-styles.css estén linkeados antes */
+
+.content-header {
+    border-bottom: 2px solid var(--main-red);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: var(--header-color);
+}
+
+/* -------------------- Filtros -------------------- */
+.filters-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    gap: 20px;
+}
+
+.search-placa {
+    flex-basis: 35%;
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 8px 15px;
+    background-color: var(--card-bg);
+}
+
+.search-placa i {
+    color: #aaa;
+    margin-right: 10px;
+}
+
+.search-placa input {
+    border: none;
+    outline: none;
+    padding: 0;
+    font-size: 1em;
+    width: 100%;
+}
+
+.date-range {
+    flex-basis: 60%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    color: var(--header-color);
+}
+
+.date-range input[type="date"] {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.dates-display {
+    /* Estilo del texto "Desde 2/2/2025 Hasta 2/12/2025" */
+    background-color: #e0e0e0;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+
+/* -------------------- Tabla -------------------- */
+.table-container {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    overflow-x: auto; /* Para tablas en dispositivos pequeños */
+}
+
+.access-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.access-table th {
+    background-color: #f0f0f0;
+    color: var(--header-color);
+    padding: 12px 15px;
+    font-weight: bold;
+    border-bottom: 2px solid #ddd;
+}
+
+.access-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.access-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Estilos de Estado */
+.status.allowed {
+    color: var(--allowed-green);
+    font-weight: bold;
+}
+
+.status.denied {
+    color: var(--denied-red);
+    font-weight: bold;
+}
+
+/* -------------------- Paginación -------------------- */
+.pagination-container {
+    display: flex;
+    justify-content: flex-end; /* Alinear a la derecha como en el PDF */
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+}
+
+.nav-btn {
+    background-color: #ddd;
+    color: var(--header-color);
+    padding: 8px 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.nav-btn:hover {
+    background-color: #ccc;
+}
+
+.page-info {
+    font-weight: bold;
+    color: var(--header-color);
+}

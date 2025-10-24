@@ -1,0 +1,224 @@
+:root {
+    --main-red: #b32537; /* Color principal de SmartCar */
+    --light-bg: #f5f5f5;
+    --card-bg: #ffffff;
+    --denied-red: #b32537; /* Rojo para Denegado */
+    --allowed-green: #28a745; /* Verde para Permitido */
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-bg);
+}
+
+.main-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* -------------------- Barra de Navegación Lateral (Menú) -------------------- */
+.sidebar {
+    width: 250px;
+    background-color: var(--main-red);
+    color: white;
+    padding: 20px 0;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    text-align: center;
+    font-size: 1.8em;
+    margin-bottom: 30px;
+}
+
+.nav-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-menu li {
+    padding: 15px 25px;
+    cursor: pointer;
+    font-size: 1.05em;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+}
+
+.nav-menu li i {
+    margin-right: 10px;
+}
+
+.nav-menu li:hover, .nav-menu li.active {
+    background-color: #8c1e29;
+}
+
+.nav-button {
+    background-color: #e0e0e0; /* Botón destacado */
+    color: var(--main-red);
+    font-weight: bold;
+    text-align: center;
+    margin: 20px 25px;
+    border-radius: 5px;
+    justify-content: center;
+}
+
+/* -------------------- Contenido Principal -------------------- */
+.content {
+    flex-grow: 1;
+    padding: 30px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.header h2 {
+    color: #333;
+    font-size: 1.8em;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 5px 15px;
+    background-color: var(--card-bg);
+}
+
+.search-bar input {
+    border: none;
+    outline: none;
+    padding: 5px;
+    font-size: 1em;
+    width: 200px;
+}
+
+.search-bar i {
+    color: #aaa;
+}
+
+/* -------------------- Tarjetas de Resumen -------------------- */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.card h3 {
+    border-bottom: 2px solid var(--main-red);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    color: var(--main-red);
+}
+
+/* --- Tarjeta de Historial de Accesos --- */
+.access-history {
+    min-height: 180px;
+}
+
+.access-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1em;
+    margin-bottom: 15px;
+}
+
+.access-item .status {
+    font-weight: bold;
+}
+
+.denied {
+    color: var(--denied-red); /* Rojo */
+}
+
+.allowed {
+    color: var(--allowed-green); /* Verde */
+}
+
+.status-legend {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px dashed #ccc;
+}
+
+.status-legend i {
+    margin-right: 5px;
+    font-size: 0.8em;
+}
+
+/* --- Tarjeta de Alertas --- */
+.alerts-summary {
+    text-align: center;
+}
+
+.alert-count {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: var(--denied-red);
+    margin: 20px 0;
+}
+
+.manage-button {
+    background-color: var(--main-red);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+/* --- Tarjeta de Gestión de Vehículos --- */
+.vehicle-management {
+    text-align: center;
+}
+
+.total-count {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+    margin: 20px 0;
+}
+
+.actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.action-button {
+    padding: 10px 15px;
+    border: 2px solid var(--main-red);
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: transparent;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.action-button.add {
+    color: var(--main-red);
+}
+
+.action-button.edit {
+    background-color: var(--main-red);
+    color: white;
+}

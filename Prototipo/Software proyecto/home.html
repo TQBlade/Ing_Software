@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCar - Dashboard</title>
+    <link rel="stylesheet" href="estilos/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="main-container">
+        <aside class="sidebar">
+            <h1 class="logo">SmartCar</h1>
+            <nav class="nav-menu">
+                <ul>
+                    <li class="active"><i class="fas fa-list-alt"></i> Historial de Accesos</li>
+                    <li><i class="fas fa-bell"></i> Alertas</li>
+                    <li><i class="fas fa-car"></i> Gestión de vehículos</li>
+                    <li><i class="fas fa-calendar-alt"></i> Calendario</li>
+                    <li class="nav-button"><i class="fas fa-check-circle"></i> Validar acceso vehicular</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header class="header">
+                <h2>Historial de Accesos</h2>
+                <div class="search-bar">
+                    <input type="text" placeholder="Buscar">
+                    <i class="fas fa-search"></i>
+                </header>
+
+            <section class="summary-cards">
+                
+                <div class="card access-history">
+                    <h3>Historial de Accesos</h3>
+                    <div class="access-item">
+                        <span class="time">10:30</span>
+                        <span class="vehicle">ABC-123</span>
+                        <span class="plate">XYT-789</span>
+                        <span class="status denied">Rojo</span>
+                    </div>
+                    <div class="status-legend">
+                        <span class="allowed-status"><i class="fas fa-circle allowed"></i> Permitido (Verde)</span>
+                        <span class="denied-status"><i class="fas fa-circle denied"></i> Denegado (Rojo)</span>
+                    </div>
+                </div>
+
+                <div class="card alerts-summary">
+                    <h3>Alertas</h3>
+                    <p class="alert-count">3 Alertas Activas</p>
+                    <button class="manage-button">Gestionar alertas</button>
+                </div>
+
+                <div class="card vehicle-management">
+                    <h3>Gestión de Vehículos</h3>
+                    <p class="total-count">Total Registrados: 250</p>
+                    <div class="actions">
+                        <button class="action-button add">Añadir</button>
+                        <button class="action-button edit">Editar</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

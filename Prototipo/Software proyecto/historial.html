@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCar - Historial de Accesos Detallado</title>
+    <link rel="stylesheet" href="estilos/home.css"> <link rel="stylesheet" href="estilos/historial.css"> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="main-container">
+        <aside class="sidebar">
+            <h1 class="logo">SmartCar</h1>
+            <nav class="nav-menu">
+                <ul>
+                    <li class="active"><i class="fas fa-list-alt"></i> Historial de Accesos</li>
+                    <li><i class="fas fa-bell"></i> Alertas</li>
+                    <li><i class="fas fa-car"></i> Gestión de vehículos</li>
+                    <li><i class="fas fa-calendar-alt"></i> Calendario</li>
+                    <li class="nav-button"><i class="fas fa-check-circle"></i> Validar acceso vehicular</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header class="content-header">
+                <h2>Historial de Accesos</h2>
+            </header>
+
+            <div class="filters-container">
+                <div class="search-placa">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Buscar por placa" aria-label="Buscar por placa">
+                </div>
+                <div class="date-range">
+                    <label for="date-from">Desde</label>
+                    <input type="date" id="date-from" value="2025-02-02">
+                    <label for="date-to">Hasta</label>
+                    <input type="date" id="date-to" value="2025-12-02">
+                    <span class="dates-display">2/2/2025 Hasta 2/12/2025</span> </div>
+            </div>
+
+            <div class="table-container">
+                <table class="access-table">
+                    <thead>
+                        <tr>
+                            <th>Placa</th>
+                            <th>Hora Entrada</th>
+                            <th>Hora Salida</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ΧΥΖ-249</td>
+                            <td>6:30 am</td>
+                            <td>10:40 am</td>
+                            <td>12/2/2025</td>
+                            <td class="status allowed">Permitido</td>
+                        </tr>
+                        <tr>
+                            <td>XYZ-356</td>
+                            <td>8:40 am</td>
+                            <td>2:30 pm</td>
+                            <td>24/5/2025</td>
+                            <td class="status denied">Denegado</td>
+                        </tr>
+                        <tr>
+                            <td>OPL-587</td>
+                            <td>2:40 pm</td>
+                            <td>6:00 pm</td>
+                            <td>30/4/2025</td>
+                            <td class="status allowed">Permitido</td>
+                        </tr>
+                        <tr>
+                            <td>AWZ-890</td>
+                            <td>4:10 pm</td>
+                            <td>6:30 pm</td>
+                            <td>23/9/2025</td>
+                            <td class="status allowed">Permitido</td>
+                        </tr>
+                        <tr>
+                            <td>ABC-001</td>
+                            <td>9:00 am</td>
+                            <td>1:00 pm</td>
+                            <td>1/1/2025</td>
+                            <td class="status denied">Denegado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="pagination-container">
+                <button class="nav-btn">Anterior</button>
+                <span class="page-info">1/10</span>
+                <button class="nav-btn">Siguiente</button>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

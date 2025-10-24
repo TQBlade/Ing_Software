@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCar - Iniciar Sesión</title>
+    <link rel="stylesheet" href="estilos/login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="login-container">
+        <form class="login-form">
+            <label for="usuario" class="label-text">Usuario:</label>
+            <div class="input-group">
+                <i class="fas fa-user icon"></i>
+                <input type="text" id="usuario" name="usuario" class="login-input" aria-label="Ingresa tu usuario">
+            </div>
+
+            <label for="contrasena" class="label-text">Contraseña:</label>
+            <div class="input-group">
+                <i class="fas fa-key icon"></i>
+                <input type="password" id="contrasena" name="contrasena" class="login-input" aria-label="Ingresa tu contraseña">
+            </div>
+
+            <p class="label-text rol-selecto-label">Rol selecto:</p>
+            <div class="role-selection">
+                <input type="radio" id="administrador" name="rol" value="Administrador" checked>
+                <label for="administrador" class="radio-label">Administrador</label>
+                
+                <input type="radio" id="vigilante" name="rol" value="Vigilante">
+                <label for="vigilante" class="radio-label">Vigilante</label>
+            </div>
+            
+            <button type="submit" class="access-button">Acceder</button>
+        </form>
+    </div>
+</body>
+</html>
