@@ -7,15 +7,16 @@ El sistema busca automatizar el control de ingreso de vehículos al campus unive
 
 ## 📑 Tabla de Contenidos
 
-- Descripción del Proyecto
-- Integrantes
-- Estructura del Proyecto
-- Tecnologías Utilizadas
-- Características y Funcionalidades
-- Prototipo PHP
-- Documentación del Proyecto
-- Licencia
-- Autor y Docente
+- Descripción del Proyecto  
+- Integrantes  
+- Estructura del Proyecto  
+- Tecnologías Utilizadas  
+- Características y Funcionalidades  
+- Prototipo PHP  
+- Documentación del Proyecto  
+- Proyecto Desarrollado  
+- Licencia  
+- Autor y Docente  
 
 ---
 
@@ -27,12 +28,13 @@ Este sistema tiene como propósito garantizar el control seguro, eficiente y aut
 
 ## 👥 Integrantes
 
-| Nombre                      | Rol                        |
-|----------------------------|-----------------------------|
-| Asly Acuña                 | Analista / Desarrollador    |
-| Owen Fuentes               | Analista / Desarrollador    |
-| Erick Usuche               | Analista / Desarrollador    |
-| Felipe Mantilla            | Analista / Desarrollador    |
+| Nombre            | Rol                     |
+|-------------------|--------------------------|
+| Asly Acuña        | Analista / Desarrollador |
+| Owen Fuentes      | Analista / Desarrollador |
+| Erick Usuche      | Analista / Desarrollador |
+| Felipe Mantilla   | Analista / Desarrollador |
+
 ---
 
 ## 📁 Estructura del Proyecto
@@ -58,28 +60,27 @@ acceso-vehicular-unipamplona/
 ├── Contribuciones.md       # Guía para contribuir al proyecto
 ├── LICENSE                 # Licencia MIT
 └── README.md               # Documentación general del proyecto
-
 ```
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **PHP 7.4**: Desarrollo del prototipo funcional.
-- **HTML5 y CSS3**: Interfaces básicas.
-- **Git + GitHub**: Control de versiones y documentación.
+- **PHP 7.4**: Desarrollo del prototipo funcional.  
+- **HTML5 y CSS3**: Interfaces básicas.  
+- **Git + GitHub**: Control de versiones y documentación.  
 
 ---
 
 ## ⚙️ Características y Funcionalidades
 
-- Registro de usuarios y vehículos autorizados.
-- Validación de acceso vehicular por placa o QR.
-- Control de horarios y permisos especiales.
-- Registro de accesos (entrada/salida).
-- Generación de alertas por accesos no autorizados.
-- Panel administrativo para reportes y trazabilidad.
-- Registro de cambios y auditoría del sistema.
+- Registro de usuarios y vehículos autorizados.  
+- Validación de acceso vehicular por placa o QR.  
+- Control de horarios y permisos especiales.  
+- Registro de accesos (entrada/salida).  
+- Generación de alertas por accesos no autorizados.  
+- Panel administrativo para reportes y trazabilidad.  
+- Registro de cambios y auditoría del sistema.  
 
 ---
 
@@ -87,13 +88,13 @@ acceso-vehicular-unipamplona/
 
 El prototipo básico simula el flujo funcional del sistema real, incluyendo:
 
-- Inicio de sesión simulado
-- Registro de vehículo
-- Validación de acceso por placa (simulado)
-- Alertas de acceso denegado
-- Panel de navegación por tipo de usuario
+- Inicio de sesión simulado  
+- Registro de vehículo  
+- Validación de acceso por placa (simulado)  
+- Alertas de acceso denegado  
+- Panel de navegación por tipo de usuario  
 
-🗂️ Archivos disponibles en la carpeta [`prototipo/`]
+🗂️ Archivos disponibles en la carpeta [`prototipo_php/`]
 
 ---
 
@@ -103,9 +104,120 @@ Los documentos Word correspondientes a cada tarea se encuentran organizados por 
 
 ---
 
+## 📦 Proyecto Desarrollado – PROMPT MAESTRO 🚗🤖
 
+### 🎯 Objetivo General
+Desarrollar un **Sistema Inteligente de Control de Acceso Vehicular** para la **Universidad de Pamplona – Sede Villa del Rosario**, implementado con un **backend en Python nativo (sin frameworks)**, un **frontend en React + TailwindCSS**, **base de datos PostgreSQL** y **reconocimiento automático de placas** mediante **OpenCV + EasyOCR**.
+
+---
+
+### 🏗️ Arquitectura Tecnológica
+
+| Componente | Tecnología / Herramienta |
+|-------------|---------------------------|
+| **Backend** | Python 3.10+ (`socketserver`, `http.server`) |
+| **Frontend** | React.js 18+ |
+| **Estilos** | TailwindCSS |
+| **Base de Datos** | PostgreSQL |
+| **Conexión BD** | psycopg2 (pool de conexiones) |
+| **OCR** | OpenCV + EasyOCR |
+| **Seguridad** | pyjwt (JWT) + hashlib (SHA256) |
+| **Despliegue Planeado** | Docker + Nginx (proxy inverso, estáticos) + HTTPS (Let's Encrypt) |
+
+---
+
+### 📂 Estructura del Proyecto Desarrollado
+
+```plaintext
+proyecto-desarrollado/
+├── backend/
+│   ├── core/
+│   │   ├── server.py
+│   │   ├── router.py
+│   │   ├── controller_personas.py
+│   │   ├── controller_vehiculos.py
+│   │   ├── controller_accesos.py
+│   │   ├── controller_alertas.py
+│   │   ├── auth.py
+│   │   └── db.py
+│   ├── models/
+│   │   ├── vehiculo.py
+│   │   └── ...
+│   ├── ocr/
+│   │   └── detector.py
+│   └── requirements.txt
+├── frontend/
+│   ├── public/
+│   │   └── index.html
+│   ├── src/
+│   │   └── App.jsx
+│   └── package.json
+├── docker-compose.yml
+└── .env
+```
+
+---
+
+### ⚙️ Configuración y Despliegue
+
+#### 🔐 Variables de Entorno (.env)
+
+```env
+# Base de Datos PostgreSQL
+DB_HOST=db
+DB_PORT=5432
+DB_NAME=control_acceso
+DB_USER=admin
+DB_PASS=supersecret
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+
+# Seguridad
+JWT_SECRET=una-clave-secreta-muy-larga-y-dificil-de-adivinar
+JWT_ALGORITHM=HS256
+JWT_EXP_DELTA_SECONDS=3600
+```
+
+#### 🐳 Despliegue con Docker
+
+```bash
+# 1. Construir y levantar los contenedores
+docker-compose up --build -d
+
+# 2. (Opcional) Ver logs
+docker-compose logs -f backend
+docker-compose logs -f db
+```
+
+En un entorno de producción, **Nginx** servirá los archivos estáticos del frontend y actuará como **proxy inverso** del backend en el puerto `8000`, asegurando comunicación mediante **HTTPS (Let's Encrypt)**.
+
+---
+
+### 🔗 Endpoints de la API (Ejemplos)
+
+| Método | Endpoint | Descripción | Requiere Auth |
+|---------|-----------|-------------|----------------|
+| `POST` | `/api/login` | Iniciar sesión y obtener token JWT | ❌ |
+| `POST` | `/api/accesos/validar` | Validar acceso por imagen base64 (OCR) | ✅ |
+| `GET`  | `/api/vehiculos` | Listar vehículos registrados | ✅ |
+| `POST` | `/api/vehiculos` | Registrar nuevo vehículo | ✅ |
+| `GET`  | `/api/alertas` | Listar alertas de seguridad | ✅ |
+
+---
+
+### 💡 Características Adicionales
+
+- Backend nativo sin frameworks (mayor control del flujo HTTP).  
+- Reconocimiento OCR mediante EasyOCR + OpenCV.  
+- Seguridad mediante JWT + SHA256.  
+- Pool de conexiones PostgreSQL optimizado con `psycopg2`.  
+- Interfaz moderna en React con TailwindCSS.  
+- Docker Compose para orquestación del backend y la base de datos.  
+- Despliegue escalable con Nginx y certificados HTTPS.  
+
+---
 
 ## 👨‍🏫 Autor y Docente
 
-Proyecto desarrollado para la asignatura Ingeniería de Software
-**Docente:** [Ing. Fanny Casadiego]
+Proyecto desarrollado para la asignatura **Ingeniería de Software II**  
+**Docente:** *Ing. Fanny Casadiego*
