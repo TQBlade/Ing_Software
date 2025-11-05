@@ -158,41 +158,6 @@ proyecto-desarrollado/
 
 ---
 
-### ⚙️ Configuración y Despliegue
-
-#### 🔐 Variables de Entorno (.env)
-
-```env
-# Base de Datos PostgreSQL
-DB_HOST=db
-DB_PORT=5432
-DB_NAME=control_acceso
-DB_USER=admin
-DB_PASS=supersecret
-DB_POOL_MIN=2
-DB_POOL_MAX=10
-
-# Seguridad
-JWT_SECRET=una-clave-secreta-muy-larga-y-dificil-de-adivinar
-JWT_ALGORITHM=HS256
-JWT_EXP_DELTA_SECONDS=3600
-```
-
-#### 🐳 Despliegue con Docker
-
-```bash
-# 1. Construir y levantar los contenedores
-docker-compose up --build -d
-
-# 2. (Opcional) Ver logs
-docker-compose logs -f backend
-docker-compose logs -f db
-```
-
-En un entorno de producción, **Nginx** servirá los archivos estáticos del frontend y actuará como **proxy inverso** del backend en el puerto `8000`, asegurando comunicación mediante **HTTPS (Let's Encrypt)**.
-
----
-
 ### 🔗 Endpoints de la API (Ejemplos)
 
 | Método | Endpoint | Descripción | Requiere Auth |
