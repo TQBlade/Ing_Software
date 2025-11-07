@@ -105,11 +105,14 @@ def detectar_placa(base64_image_data: str) -> str | None:
 if __name__ == "__main__":
     print("\n--- INICIANDO PRUEBA LOCAL DE OCR ---")
     
-    # Ruta a tu imagen de prueba (ajusta si es necesario)
-    # Asume que la imagen está en la carpeta `backend/`
-    script_dir = os.path.dirname(__file__) # Directorio 'ocr'
-    backend_dir = os.path.dirname(script_dir) # Directorio 'backend'
-    RUTA_IMAGEN_PRUEBA = os.path.join(backend_dir, "placa_prueba.jpg")
+    # --- RUTA CORREGIDA ---
+    # __file__ es 'backend/ocr/detector.py'
+    # os.path.dirname(__file__) es 'backend/ocr'
+    script_dir = os.path.dirname(__file__)
+    
+    # La imagen está AHORA en el MISMO directorio 'ocr' y es .png
+    RUTA_IMAGEN_PRUEBA = os.path.join(script_dir, "placa_prueba3.jpg")
+    # --- FIN DE LA CORRECCIÓN ---
 
     if not os.path.exists(RUTA_IMAGEN_PRUEBA):
         print(f"Error: No se encuentra la imagen de prueba en {RUTA_IMAGEN_PRUEBA}")
