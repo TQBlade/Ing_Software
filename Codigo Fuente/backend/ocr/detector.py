@@ -111,7 +111,7 @@ if __name__ == "__main__":
     script_dir = os.path.dirname(__file__)
     
     # La imagen está AHORA en el MISMO directorio 'ocr' y es .png
-    RUTA_IMAGEN_PRUEBA = os.path.join(script_dir, "placa_prueba3.jpg")
+    RUTA_IMAGEN_PRUEBA = os.path.join(script_dir, "img_placas/placa_prueba3.jpg")
     # --- FIN DE LA CORRECCIÓN ---
 
     if not os.path.exists(RUTA_IMAGEN_PRUEBA):
