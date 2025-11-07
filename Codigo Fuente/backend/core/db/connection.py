@@ -1,21 +1,17 @@
 import psycopg2
-from flask import g, current_app
+from psycopg2 import Error
+from config import Config
 
-def init_db(app):
-    app.teardown_appcontext(close_db)
-
-def get_db():
-    if "db" not in g:
-        g.db = psycopg2.connect(
-            host=current_app.config["DB_HOST"],
-            dbname=current_app.config["DB_NAME"],
-            user=current_app.config["DB_USER"],
-            password=current_app.config["DB_PASSWORD"],
-            port=current_app.config["DB_PORT"]
+def get_connection():
+    try:
+        connection = psycopg2.connect(
+            host=Config.DB_HOST,
+            port=Config.DB_PORT,
+            database=Config.DB_NAME,
+            user=Config.DB_USER,
+            password=Config.DB_PASSWORD
         )
-    return g.db
-
-def close_db(e=None):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+        return connection
+    except Error as e:
+        print(f"❌ Error al conectar con PostgreSQL: {e}")
+        return None
