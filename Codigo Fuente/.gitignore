@@ -12,3 +12,8 @@ Thumbs.db
 
 # Archivos de entorno (buena práctica para el futuro)
 .env
+
+venv/
+.venv/
+__pycache__/
+*.pyc
