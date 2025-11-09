@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCar - Dashboard Vigilante</title>
+    <link rel="stylesheet" href="static/css/dashboard.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="navbar-logo">
+            <img src="../static/img/SmartCar.png" alt="SmartCar Logo">
+        </div>
+        <nav class="navbar-links">
+            <a href="#"><i class="fas fa-history"></i> Historial de Accesos</a>
+            <a href="#"><i class="fas fa-bell"></i> Alertas</a>
+            <a href="#"><i class="fas fa-car"></i> Gestión de vehículos</a>
+            <a href="#"><i class="fas fa-calendar-alt"></i> Calendario</a>
+        </nav>
+        <div class="navbar-user">
+            <span id="welcome-message">Bienvenido, ...</span>
+            <button id="logout-button" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        
+        <div class="dashboard-grid">
+
+            <div class="widget widget-main-action">
+                <h3><i class="fas fa-exclamation-circle"></i> Validar acceso vehicular</h3>
+                <div class="validator-icon">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <div class="search-bar">
+                    <input type="text" placeholder="Buscar placa...">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+
+            <div class="widget">
+                <h4><i class="fas fa-clock"></i> Historial de Accesos</h4>
+                <div class="log-list">
+                    <div class="log-item">
+                        <span>10:30</span>
+                        <span>ABC-123</span>
+                        <span class="status-permitted">Permitido</span>
+                    </div>
+                    <div class="log-item">
+                        <span>10:28</span>
+                        <span>XYT-789</span>
+                        <span class="status-denied">Denegado</span>
+                    </div>
+                    </div>
+            </div>
+
+            <div class="widget widget-alerts">
+                <h4><i class="fas fa-bell"></i> Alertas</h4>
+                <div class="alert-info">
+                    <span class="alert-count">3</span>
+                    <span>Alertas Activas</span>
+                </div>
+                <button class="btn btn-primary">Gestionar alertas</button>
+            </div>
+
+            <div class="widget">
+                <h4><i class="fas fa-car-side"></i> Gestión de Vehículos</h4>
+                <div class="management-info">
+                    <span>Total Registrados:</span>
+                    <span class="management-count">250</span>
+                </div>
+                <div class="widget-buttons">
+                    <button class="btn btn-primary">Añadir</button>
+                    <button class="btn btn-secondary">Editar</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
