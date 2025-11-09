@@ -2,19 +2,25 @@
 
 import psycopg2
 from psycopg2 import pool
-from .config import Config  # <-- Asegúrate de que el '.' esté aquí
+from .config import Config
 import sys
 
-# 1. Crear el Pool de Conexión UNA SOLA VEZ
+# 1. Construir los parámetros de conexión
+connection_params = {
+    'host': Config.DB_HOST,
+    'port': Config.DB_PORT,
+    'database': Config.DB_NAME,
+    'user': Config.DB_USER,
+    'password': Config.DB_PASSWORD,
+    'client_encoding': 'UTF8'
+}
+
+# 2. Crear el Pool de Conexión usando parámetros directos
 try:
     connection_pool = psycopg2.pool.SimpleConnectionPool(
         minconn=1,
-        maxconn=10, # Máximo 10 conexiones simultáneas
-        host=Config.DB_HOST,
-        port=Config.DB_PORT,
-        database=Config.DB_NAME,
-        user=Config.DB_USER,
-        password=Config.DB_PASSWORD
+        maxconn=10,
+        **connection_params
     )
     print("✅ Pool de conexiones a PostgreSQL creado exitosamente.")
 
@@ -36,7 +42,6 @@ def get_connection():
 def release_connection(conn):
     """
     Devuelve una conexión al pool para que sea reutilizada.
-    (Esta es la función que faltaba)
     """
     if conn:
         connection_pool.putconn(conn)
