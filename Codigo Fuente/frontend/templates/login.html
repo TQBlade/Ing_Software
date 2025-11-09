@@ -6,28 +6,28 @@
     <title>Inicio de Sesión | SmartCar</title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="static/css/login.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <div class="login-container">
         <div class="logo">
-            <img src="../static/img/logo.png" alt="SmartCar Logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="SmartCar Logo">
         </div>
 
         <h1>Bienvenido a SmartCar</h1>
         <p>Inicia sesión para continuar</p>
 
-        <form id="loginForm">
+        <!-- 🚨 Importante: quitamos action, añadimos onsubmit -->
+        <form id="loginForm" onsubmit="return false;">
             <div class="form-group">
                 <label for="usuario">Usuario</label>
-                <input type="text" id="usuario" name="usuario" placeholder="Ingresa tu usuario">
+                <input type="text" id="usuario" name="usuario" placeholder="Ingresa tu usuario" required>
             </div>
 
             <div class="form-group">
                 <label for="clave">Contraseña</label>
-                <input type="password" id="clave" name="clave" placeholder="Ingresa tu contraseña">
+                <input type="password" id="clave" name="clave" placeholder="Ingresa tu contraseña" required>
             </div>
 
             <div class="roles">
@@ -35,13 +35,12 @@
                 <label><input type="radio" name="rol" value="Vigilante"> Vigilante</label>
             </div>
 
-            <button type="submit">Iniciar Sesión</button>
-
+            <button type="submit" id="btnLogin">Iniciar Sesión</button>
             <div id="alert" class="alert"></div>
         </form>
     </div>
 
-    <!-- JS -->
-    <script src="Codigo Fuente/backend/static/js/login.js"></script>
+    <!-- JS al final -->
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 </body>
 </html>

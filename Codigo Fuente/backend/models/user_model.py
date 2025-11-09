@@ -1,45 +1,48 @@
-# models/user_model.py
+from core.db.connection import get_connection
 
-# Importa las funciones correctas del pool de conexión
-from core.db.connection import get_connection, release_connection
-
-def obtener_datos_usuario(usuario: str):
-    """
-    Obtiene los datos de un usuario desde tmusuarios para verificarlo.
-    Solo necesita el nombre de usuario.
-    """
-    conn = None # Inicializa la conexión como None
+def verificar_usuario(usuario, clave, rol):
     try:
-        conn = get_connection() # Pide una conexión al pool
-        if conn is None:
-            print("Error: No se pudo obtener conexión de la base de datos.")
+        conn = get_connection()
+        cur = conn.cursor()
+
+        query = """
+            SELECT nombre, usuario, clave, nivel
+            FROM tmusuarios
+            WHERE LOWER(usuario) = LOWER(%s)
+              AND clave = %s
+        """
+        cur.execute(query, (usuario, clave))
+        result = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        print("🔍 Resultado BD:", result)
+        print("🧩 Rol recibido:", rol)
+
+        if not result:
+            print("❌ No se encontró el usuario o clave incorrecta.")
             return None
 
-        with conn.cursor() as cursor:
-            # La consulta NUNCA debe incluir la contraseña (clave)
-            # Solo buscamos al usuario para OBTENER su hash almacenado.
-            cursor.execute("""
-                SELECT clave, nombre, nivel 
-                FROM tmusuarios 
-                WHERE usuario = %s AND fkcods = 1;
-            """, (usuario,))
-            
-            fila = cursor.fetchone()
+        nombre, user_db, clave_db, nivel = result
+        print("✅ Usuario encontrado:", nombre, "| Nivel:", nivel)
 
-        if fila:
-            # Devolvemos un diccionario fácil de usar
-            return {"clave_hash": fila[0], "nombre": fila[1], "nivel": fila[2]}
-        else:
-            # El usuario no existe
+        # Validación correcta:
+        if rol == "Administrador" and nivel != 1:
+            print("🚫 Nivel no coincide con Administrador (debería ser 1)")
             return None
+        elif rol == "Vigilante" and nivel != 0:
+            print("🚫 Nivel no coincide con Vigilante (debería ser 0)")
+            return None
+
+        print("✅ Rol validado correctamente:", rol)
+        return {
+            "nombre": nombre,
+            "usuario": user_db,
+            "nivel": nivel,
+            "rol": rol
+        }
 
     except Exception as e:
-        print(f"Error en user_model.py al obtener usuario: {e}")
+        print("❌ Error en verificar_usuario:", e)
         return None
-    
-    finally:
-        # ¡MUY IMPORTANTE!
-        # Esto asegura que la conexión se DEVUELVA al pool,
-        # incluso si ocurre un error.
-        if conn:
-            release_connection(conn)

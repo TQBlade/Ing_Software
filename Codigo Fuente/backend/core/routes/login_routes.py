@@ -1,71 +1,109 @@
-# core/routes/login_routes.py
-
 from flask import Blueprint, request, jsonify
-# Importamos nuestro NUEVO modelo
-from models.user_model import obtener_datos_usuario 
-# Importamos el verificador de hash
-from core.security import verify_password, create_jwt_token 
+import psycopg2 
+import os
+import jwt 
+from datetime import datetime, timedelta
 
-login_bp = Blueprint('login_bp', __name__)
+# Inicialización del Blueprint para manejar las rutas relacionadas con el login
+login_bp = Blueprint('login', __name__)
+
+# Configuración (DEBES AJUSTAR ESTO A TU ENTORNO)
+DB_NAME = 'bd_carros'
+DB_USER = 'postgres'
+# VUELVE A PONER TU CONTRASEÑA REAL AQUÍ:
+DB_PASSWORD = '123456' 
+DB_HOST = 'localhost'
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'SUPER_SECRETO_Y_LARGO_2025') 
+
+ROL_TO_NIVEL = {
+    "Administrador": 1,
+    "Vigilante": 0
+}
+
+def get_db_connection():
+    """Establece y devuelve una conexión a la base de datos."""
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST
+        )
+        return conn
+    except psycopg2.Error as e:
+        # Imprime el error exacto de la conexión en la consola de Flask/servidor
+        print(f"🚨 ERROR FATAL DE CONEXIÓN A POSTGRES: {e}") 
+        return None
 
 @login_bp.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    if not data or 'usuario' not in data or 'clave' not in data or 'rol' not in data:
-        return jsonify({"error": "Faltan datos (usuario, clave, rol)"}), 400
+    """
+    Ruta para manejar la solicitud de inicio de sesión.
+    Valida credenciales y devuelve un JWT.
+    """
+    data = request.get_json()
+    usuario = data.get('usuario')
+    clave = data.get('clave')
+    rol_str = data.get('rol') 
 
-    usuario = data['usuario']
-    clave_recibida = data['clave']      # La contraseña en texto plano que envía el usuario
-    rol_seleccionado = data['rol']   # El rol que el usuario eligió (Admin/Vigilante)
+    if not all([usuario, clave, rol_str]):
+        return jsonify({"error": "Faltan datos de usuario, clave o rol"}), 400
 
+    nivel_requerido = ROL_TO_NIVEL.get(rol_str)
+    if nivel_requerido is None:
+         return jsonify({"error": "Rol seleccionado no válido"}), 400
+
+
+    conn = get_db_connection()
+    if conn is None:
+        # El error de conexión ya se imprimió en get_db_connection
+        return jsonify({"error": "Error interno. No se pudo conectar a la base de datos"}), 500
+        
+    cursor = conn.cursor()
+    
     try:
-        # 1. Llamamos al Modelo para obtener los datos del usuario
-        user_data_from_db = obtener_datos_usuario(usuario)
+        # Imprime la consulta y los valores en la consola para depuración
+        print(f"DEBUG: Intentando autenticar usuario: {usuario} con nivel: {nivel_requerido}")
+        
+        cursor.execute(
+            """
+            SELECT nu, nombre, nivel 
+            FROM tmusuarios 
+            WHERE usuario = %s AND clave = %s AND nivel = %s
+            """,
+            (usuario, clave, nivel_requerido)
+        )
+        user_record = cursor.fetchone()
 
-        if not user_data_from_db:
-            # El usuario no existe. Mensaje genérico.
+        if user_record:
+            nu, nombre, nivel = user_record
+            
+            # [Generación de JWT y retorno de éxito, omitido para brevedad]
+            token_payload = {
+                'nu': nu,
+                'nombre': nombre,
+                'nivel': nivel,
+                'exp': datetime.utcnow() + timedelta(hours=2)
+            }
+            token = jwt.encode(token_payload, JWT_SECRET_KEY, algorithm='HS256')
+
+            return jsonify({
+                "message": "Autenticación exitosa",
+                "token": token,
+                "user": {
+                    "id": nu,
+                    "nombre": nombre,
+                    "nivel": nivel
+                }
+            }), 200
+        else:
+            # Si no se encuentra el registro, el error 401 es correcto
+            print(f"DEBUG: Autenticación fallida para {usuario}.")
             return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
 
-        # Extraemos los datos que nos dio el modelo
-        stored_hash = user_data_from_db['clave_hash']
-        user_name = user_data_from_db['nombre']
-        user_level = user_data_from_db['nivel'] # 0 o 1
-
-        # 2. Llamamos al Módulo de Seguridad para verificar el hash
-        if not verify_password(stored_hash, clave_recibida):
-            # La contraseña no coincide. Mensaje genérico.
-            return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
-
-        # 3. Validamos que el Rol seleccionado coincida con el Nivel de la BD
-        # (Nivel 1 = Admin, Nivel 0 = Vigilante)
-        es_valido = False
-        if rol_seleccionado == "Administrador" and user_level == 1:
-            es_valido = True
-        elif rol_seleccionado == "Vigilante" and user_level == 0:
-            es_valido = True
-
-        if not es_valido:
-            # El rol es incorrecto.
-            return jsonify({"error": f"Acceso denegado. Usted no tiene permisos de '{rol_seleccionado}'."}), 403
-
-        # 4. ¡Éxito! Creamos el Token JWT
-        user_data_for_token = {
-            "usuario": usuario,
-            "nombre": user_name,
-            "nivel": user_level,
-            "rol_login": rol_seleccionado
-        }
-        token = create_jwt_token(user_data_for_token)
-
-        if not token:
-            return jsonify({"error": "Error interno al crear la sesión"}), 500
-
-        return jsonify({
-            "message": "Inicio de sesión exitoso",
-            "token": token,
-            "user": user_data_for_token
-        }), 200
-
-    except Exception as e:
-        print(f"Error grave en el endpoint /login: {e}")
-        return jsonify({"error": "Error interno del servidor"}), 500
+    except psycopg2.Error as e:
+        print(f"🚨 ERROR EN CONSULTA SQL (tmusuarios): {e}")
+        return jsonify({"error": "Error interno del servidor al consultar credenciales"}), 500
+    finally:
+        cursor.close()
+        conn.close()

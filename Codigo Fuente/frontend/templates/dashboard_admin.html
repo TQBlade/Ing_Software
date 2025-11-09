@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Administrador | SmartCar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>🚗 Panel del Administrador</h1>
+    <p>Bienvenido, <strong>{{ usuario }}</strong>.</p>
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+
+  <script>
+    function cerrarSesion() {
+      localStorage.removeItem("jwt_token");
+      localStorage.removeItem("user_info");
+      window.location.href = "/";
+    }
+  </script>
+</body>
+</html>

@@ -1,17 +1,22 @@
 // static/js/login.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("loginForm");
   const alertBox = document.getElementById("alert");
 
-  // Si el usuario ya tiene un token, intentamos mandarlo al dashboard
-  const token = localStorage.getItem('jwt_token');
-  if (token) {
-    // Aquí podrías verificar el rol guardado y redirigir
-    // Por ahora, lo mandamos al de vigilante como default
-    window.location.href = "/dashboard_vigilante";
+  // --- 1️⃣ Si ya hay token, redirigir según el rol ---
+  const token = localStorage.getItem("jwt_token");
+  const userInfo = JSON.parse(localStorage.getItem("user_info") || "{}");
+
+  if (token && userInfo.rol) {
+    if (userInfo.rol === "Administrador") {
+      window.location.href = "/dashboard_admin";
+    } else if (userInfo.rol === "Vigilante") {
+      window.location.href = "/dashboard_vigilante";
+    }
+    return;
   }
 
+  // --- 2️⃣ Manejo del formulario ---
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -36,19 +41,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         showAlert("✅ Inicio de sesión exitoso", "success");
 
-        // --- ¡LO MÁS IMPORTANTE! ---
-        // Guardamos el token y los datos del usuario en el navegador
-        localStorage.setItem('jwt_token', data.token);
-        localStorage.setItem('user_info', JSON.stringify(data.user));
-        // -----------------------------
+        // Guardar token y usuario
+        localStorage.setItem("jwt_token", data.token);
+        localStorage.setItem("user_info", JSON.stringify(data.user));
 
+        // Redirigir según el rol
         setTimeout(() => {
-          // Redirigimos según el rol con el que se logueó
           if (rol === "Administrador") {
-            // window.location.href = "dashboard_admin.html"; // (Aún no lo creamos)
-            alert("Dashboard de Admin aún no implementado.");
+            window.location.href = "/dashboard_admin";
           } else {
-            window.location.href = "/dashboard_vigilante"; // Redirige a la ruta de Flask
+            window.location.href = "/dashboard_vigilante";
           }
         }, 1000);
       } else {
@@ -60,6 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // --- 3️⃣ Función de alerta ---
   function showAlert(message, type) {
     alertBox.textContent = message;
     alertBox.className = `alert ${type}`;

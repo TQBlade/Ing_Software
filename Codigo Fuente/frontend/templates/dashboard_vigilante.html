@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>SmartCar | Panel del Vigilante</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/dashboard_vigilante.js') }}" defer></script>
+</head>
+<body>
+  <!-- ✅ Barra de navegación -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <img src="{{ url_for('static', filename='img/SmartCar.png') }}" alt="SmartCar Logo" class="logo">
+    </div>
+    <div class="nav-right">
+      <a href="/dashboard_vigilante" class="nav-link active" ;>🏠 Inicio</a>
+      <a href="/historial" class="nav-link" >📝 Historial</a>
+      <a href="/alertas" class="nav-link" >🚨 Alertas</a>
+      <a href="/gestion" class="nav-link" >⚙️ Gestión</a>
+      <a href="/calendario" class="nav-link"  >📅 Calendario</a>
+      <span class="usuario-logueado">👤 <span id="nombreUsuario">Cargando...</span></span>
+      <button id="btnLogout" class="btn-logout">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <!-- ✅ Contenido principal -->
+  <main class="contenedor-dashboard">
+    <section class="tarjeta rojo">
+      <h2>Validar acceso vehicular</h2>
+      <input type="text" id="buscarPlaca" placeholder="Buscar placa...">
+      <button id="btnBuscar">Verificar</button>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Historial de Accesos</h2>
+      <table id="tablaAccesos">
+        <thead>
+          <tr>
+            <th>Fecha y Hora</th>
+            <th>Placa</th>
+            <th>Resultado</th>
+            <th>Vigilante</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="tarjeta alerta">
+      <h2>Alertas Activas</h2>
+      <p id="alertasActivas">Cargando...</p>
+      <button id="btnVerAlertas">Gestionar alertas</button>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Gestión de Vehículos</h2>
+      <p>Total registrados: <span id="totalVehiculos">0</span></p>
+      <button id="btnVerVehiculos">Ver Vehículos</button>
+    </section>
+  </main>
+</body>
+</html>

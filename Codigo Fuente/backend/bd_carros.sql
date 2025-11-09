@@ -19,7 +19,7 @@ WITH
     LC_CTYPE = 'es_ES.UTF-8'
     TEMPLATE = template0;
 
-SELECT 'Paso 04: Conectandose a bd_carros.....'  AS paso, pg_sleep(02);
+SELECT 'Paso 04: Conectandose a bd_carros_acceso.....'  AS paso, pg_sleep(02);
 \c bd_carros
 
 -- 01.- INICIO DEL BLOQUE DE CREACIÓN DE TABLAS BASE
@@ -455,9 +455,9 @@ INSERT INTO pago (importe, medio, ref_transaccion, id_acceso_entrada, id_acceso_
 SELECT 'Paso 23: Insertando 5 Usuarios para Login ....................'  AS paso, pg_sleep(02);
 
 INSERT INTO tmusuarios (nombre, usuario, clave, nivel) VALUES
-('ASLY', 'ASLY.ADMIN@RESERVAS.COM', '12345', 1), -- Nivel Para Admin 
-('KAREN', 'KAREN.ADMIN@ACCESO.COM', '54321', 0),  -- Nivel para Vigilante
-('ANDREA', 'ANDREA.PAGOS@ACCESO.COM', 'and123', 0),   -- Nivel para Vigilante
-('JORGE', 'JORGE.VIGILANTE@ACCESO.COM', 'vigi456', 0), -- Nivel para Vigilante
-
+('ANGIE', 'ADMIN@CARROS.COM', '12345', 1), -- Administrador
+('LAURA', 'LAURAVIGI@ACCESO.COM', '54321', 0),  -- Administrador
+('FERNANDO', 'FERNVIGI@ACCESO.COM', 'fer123', 0),   -- Vigilante
+('DIEGO', 'VIGILANTE2@ACCESO.COM', 'vigi456',0), -- Vigilante
+('IVALDO', 'IVALDO@ADMIN.COM', 'res001', 1); 
 SELECT  * FROM  tmusuarios;
