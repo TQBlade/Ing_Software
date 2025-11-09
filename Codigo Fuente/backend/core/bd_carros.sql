@@ -455,10 +455,9 @@ INSERT INTO pago (importe, medio, ref_transaccion, id_acceso_entrada, id_acceso_
 SELECT 'Paso 23: Insertando 5 Usuarios para Login ....................'  AS paso, pg_sleep(02);
 
 INSERT INTO tmusuarios (nombre, usuario, clave, nivel) VALUES
-('ANGIE', 'ADMIN@RESERVAS.COM', '12345', 1), -- Base
-('LAURA', 'LAURA.ADMIN@ACCESO.COM', '54321', 1),  -- Admin
-('FERNANDO', 'PAGOS@ACCESO.COM', 'fer123', 1),   -- Nivel para Pagos/Administrativo
-('DIEGO', 'VIGILANTE2@ACCESO.COM', 'vigi456', 1), -- Nivel para Vigilante
-('RESIDENTE PRUEBA', 'RESIDENTE_P@ACCESO.COM', 'res001', 0); -- Nivel para Residente (nivel 0)
+('ASLY', 'ASLY.ADMIN@RESERVAS.COM', '12345', 1), -- Nivel Para Admin 
+('KAREN', 'KAREN.ADMIN@ACCESO.COM', '54321', 0),  -- Nivel para Vigilante
+('ANDREA', 'ANDREA.PAGOS@ACCESO.COM', 'and123', 0),   -- Nivel para Vigilante
+('JORGE', 'JORGE.VIGILANTE@ACCESO.COM', 'vigi456', 0), -- Nivel para Vigilante
 
 SELECT  * FROM  tmusuarios;

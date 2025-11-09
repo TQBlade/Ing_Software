@@ -38,6 +38,10 @@ def mostrar_login():
     print(f"📂 Buscando plantilla en: {app.template_folder}")
     return render_template("login.html")
 
+@app.route("/dashboard_vigilante")
+def mostrar_dashboard_vigilante():
+   
+    return render_template("dashboard_vigilante.html")
 # ==========================================================
 # 🔧 RUTA DE PRUEBA API
 # ==========================================================

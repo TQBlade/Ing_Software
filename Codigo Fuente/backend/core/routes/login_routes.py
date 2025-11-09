@@ -1,37 +1,71 @@
-from flask import Blueprint, request, jsonify
-from models.user_model import verificar_usuario  # import relativo
-# ↑ sube de routes/ a core/ y entra a models/
+# core/routes/login_routes.py
 
-# ==========================================================
-# 🔹 Definición del Blueprint
-# ==========================================================
+from flask import Blueprint, request, jsonify
+# Importamos nuestro NUEVO modelo
+from models.user_model import obtener_datos_usuario 
+# Importamos el verificador de hash
+from core.security import verify_password, create_jwt_token 
+
 login_bp = Blueprint('login_bp', __name__)
 
-# ==========================================================
-# 🔐 Ruta de inicio de sesión
-# ==========================================================
-@login_bp.route('/login', methods=['POST'])
+@login_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    usuario = data.get('usuario')
-    clave = data.get('clave')
-    rol = data.get('rol')  # si tu formulario incluye el rol
+    data = request.json
+    if not data or 'usuario' not in data or 'clave' not in data or 'rol' not in data:
+        return jsonify({"error": "Faltan datos (usuario, clave, rol)"}), 400
 
-    # Validación de campos vacíos
-    if not usuario or not clave:
-        return jsonify({"error": "Debe ingresar usuario y contraseña"}), 400
+    usuario = data['usuario']
+    clave_recibida = data['clave']      # La contraseña en texto plano que envía el usuario
+    rol_seleccionado = data['rol']   # El rol que el usuario eligió (Admin/Vigilante)
 
-    # Llamar al modelo para verificar en la base de datos
-    user = verificar_usuario(usuario, clave)
+    try:
+        # 1. Llamamos al Modelo para obtener los datos del usuario
+        user_data_from_db = obtener_datos_usuario(usuario)
 
-    if user:
-        # Validar el rol (opcional)
-        if rol and rol.lower() != user.get("rol", "").lower():
-            return jsonify({"error": "El rol seleccionado no coincide con el usuario."}), 403
+        if not user_data_from_db:
+            # El usuario no existe. Mensaje genérico.
+            return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
+
+        # Extraemos los datos que nos dio el modelo
+        stored_hash = user_data_from_db['clave_hash']
+        user_name = user_data_from_db['nombre']
+        user_level = user_data_from_db['nivel'] # 0 o 1
+
+        # 2. Llamamos al Módulo de Seguridad para verificar el hash
+        if not verify_password(stored_hash, clave_recibida):
+            # La contraseña no coincide. Mensaje genérico.
+            return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
+
+        # 3. Validamos que el Rol seleccionado coincida con el Nivel de la BD
+        # (Nivel 1 = Admin, Nivel 0 = Vigilante)
+        es_valido = False
+        if rol_seleccionado == "Administrador" and user_level == 1:
+            es_valido = True
+        elif rol_seleccionado == "Vigilante" and user_level == 0:
+            es_valido = True
+
+        if not es_valido:
+            # El rol es incorrecto.
+            return jsonify({"error": f"Acceso denegado. Usted no tiene permisos de '{rol_seleccionado}'."}), 403
+
+        # 4. ¡Éxito! Creamos el Token JWT
+        user_data_for_token = {
+            "usuario": usuario,
+            "nombre": user_name,
+            "nivel": user_level,
+            "rol_login": rol_seleccionado
+        }
+        token = create_jwt_token(user_data_for_token)
+
+        if not token:
+            return jsonify({"error": "Error interno al crear la sesión"}), 500
 
         return jsonify({
-            "mensaje": "Acceso concedido",
-            "usuario": user
+            "message": "Inicio de sesión exitoso",
+            "token": token,
+            "user": user_data_for_token
         }), 200
-    else:
-        return jsonify({"error": "Credenciales incorrectas"}), 401
+
+    except Exception as e:
+        print(f"Error grave en el endpoint /login: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500

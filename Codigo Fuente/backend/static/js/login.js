@@ -1,6 +1,16 @@
+// static/js/login.js
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("loginForm");
   const alertBox = document.getElementById("alert");
+
+  // Si el usuario ya tiene un token, intentamos mandarlo al dashboard
+  const token = localStorage.getItem('jwt_token');
+  if (token) {
+    // Aquí podrías verificar el rol guardado y redirigir
+    // Por ahora, lo mandamos al de vigilante como default
+    window.location.href = "/dashboard_vigilante";
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -26,11 +36,19 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         showAlert("✅ Inicio de sesión exitoso", "success");
 
+        // --- ¡LO MÁS IMPORTANTE! ---
+        // Guardamos el token y los datos del usuario en el navegador
+        localStorage.setItem('jwt_token', data.token);
+        localStorage.setItem('user_info', JSON.stringify(data.user));
+        // -----------------------------
+
         setTimeout(() => {
+          // Redirigimos según el rol con el que se logueó
           if (rol === "Administrador") {
-            window.location.href = "dashboard_admin.html";
+            // window.location.href = "dashboard_admin.html"; // (Aún no lo creamos)
+            alert("Dashboard de Admin aún no implementado.");
           } else {
-            window.location.href = "dashboard_vigilante.html";
+            window.location.href = "/dashboard_vigilante"; // Redirige a la ruta de Flask
           }
         }, 1000);
       } else {
