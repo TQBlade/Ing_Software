@@ -7,11 +7,11 @@ SELECT 'Paso 01: Iniciando el Script.....'  AS paso, pg_sleep(01);
 
 -- Borrar base de datos si existe
 SELECT 'Paso 02: Eliminar la bd_carros si Existe.....'  AS paso, pg_sleep(02);
-DROP DATABASE IF EXISTS BD_CARROS;
+DROP DATABASE IF EXISTS bd_carros;
 
 SELECT 'Paso 03: Crear bd_carros .....'  AS paso, pg_sleep(02);
 -- Crear base de datos
-CREATE DATABASE BD_CARROS
+CREATE DATABASE bd_carros
 WITH 
     OWNER = postgres
     ENCODING = 'UTF8'
@@ -19,8 +19,8 @@ WITH
     LC_CTYPE = 'es_ES.UTF-8'
     TEMPLATE = template0;
 
-SELECT 'Paso 04: Conectandose a bd_carros_acceso.....'  AS paso, pg_sleep(02);
-\c BD_CARROS
+SELECT 'Paso 04: Conectandose a bd_carros.....'  AS paso, pg_sleep(02);
+\c bd_carros
 
 -- 01.- INICIO DEL BLOQUE DE CREACIÓN DE TABLAS BASE
 -----------------------------------------------------------------------------------------
