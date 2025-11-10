@@ -108,12 +108,43 @@ def login():
 # RUTAS PROTEGIDAS
 # ===========================================================
 # ================================================
-# DASHBOARD VIGILANTE (solo entrega HTML)
+# DASHBOARD VIGILANTE 
 # ================================================
 @app.route("/dashboard_vigilante")
 def dashboard_vigilante():
     return render_template("dashboard_vigilante.html")
 
+from backend.models.dashboard_model import (
+    obtener_ultimos_accesos,
+    contar_total_vehiculos,
+    contar_alertas_activas,
+    buscar_placa_bd
+)
+
+@app.route("/api/ultimos_accesos", methods=["GET"])
+def api_ultimos_accesos():
+    data = obtener_ultimos_accesos()
+    return jsonify(data)
+
+@app.route("/api/total_vehiculos", methods=["GET"])
+def api_total_vehiculos():
+    data = contar_total_vehiculos()
+    return jsonify(data)
+
+@app.route("/api/alertas_activas", methods=["GET"])
+def api_alertas_activas():
+    data = contar_alertas_activas()
+    return jsonify(data)
+
+@app.route("/api/buscar_placa/<placa>", methods=["GET"])
+def api_buscar_placa(placa):
+    data = buscar_placa_bd(placa)
+    if data:
+        return jsonify(data)
+    else:
+        return jsonify({"error": "Placa no encontrada"}), 404
+# ================================================
+# DASHBOARD ADMINISTRADOR
 
 @app.route("/dashboard_admin")
 @token_requerido
