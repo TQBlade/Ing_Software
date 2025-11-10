@@ -8,11 +8,13 @@ from datetime import datetime, timedelta
 import jwt
 import os
 from functools import wraps
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend')))
 
 # Importar funciones de conexión y modelo de usuario
 from backend.core.db.connection import get_connection
 from backend.models.user_model import verificar_usuario
+
 
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -144,18 +146,123 @@ def api_buscar_placa(placa):
     else:
         return jsonify({"error": "Placa no encontrada"}), 404
 # ================================================
-# DASHBOARD ADMINISTRADOR
+# DASHBOARD ADMINISTRADOR (solo entrega HTML)
+from backend.models.admin_model import (
+    obtener_datos_dashboard,
+    obtener_accesos_detalle,
+    registrar_vigilante
+)
+from io import BytesIO
+from flask import send_file
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+
 
 @app.route("/dashboard_admin")
-@token_requerido
 def dashboard_admin():
-    """Página del dashboard para administradores"""
-    datos = request.usuario_actual
-    if datos["rol"] != "Administrador":
-        return jsonify({"error": "Acceso restringido a administradores"}), 403
-    return render_template("dashboard_admin.html", usuario=datos["usuario"])
+    return render_template("dashboard_admin.html")
 
 
+@app.route("/api/admin/resumen", methods=["GET"])
+def api_admin_resumen():
+    data = obtener_datos_dashboard()
+    return jsonify(data)
+
+
+@app.route("/api/admin/accesos", methods=["GET"])
+def api_admin_accesos():
+    data = obtener_accesos_detalle()
+    return jsonify(data)
+
+
+@app.route("/api/admin/registrar_vigilante", methods=["POST"])
+def api_registrar_vigilante():
+    data = request.get_json()
+    ok = registrar_vigilante(
+        data.get("nombre"),
+        data.get("doc_identidad"),
+        data.get("telefono"),
+        data.get("id_rol")
+    )
+    if ok:
+        return jsonify({"status": "ok"})
+    return jsonify({"error": "No se pudo registrar"}), 500
+
+
+@app.route("/api/admin/exportar/pdf", methods=["GET"])
+def exportar_pdf():
+    try:
+        data = obtener_accesos_detalle()
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+        pdf.setTitle("Reporte de Vehículos - SmartCar")
+
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(200, 750, "REPORTE DE VEHÍCULOS REGISTRADOS")
+        pdf.setFont("Helvetica", 11)
+
+        # Encabezados de columnas
+        y = 720
+        pdf.drawString(40, y, "Placa")
+        pdf.drawString(120, y, "Tipo")
+        pdf.drawString(230, y, "Color")
+        pdf.drawString(340, y, "Propietario")
+        pdf.drawString(500, y, "Resultado")
+        y -= 20
+
+        # Contenido
+        for item in data:
+            pdf.drawString(40, y, item['placa'])
+            pdf.drawString(120, y, item['tipo'])
+            pdf.drawString(230, y, item['color'])
+            pdf.drawString(340, y, item['propietario'])
+            pdf.drawString(500, y, item['resultado'])
+            y -= 15
+            # Salto de página automático
+            if y < 50:
+                pdf.showPage()
+                pdf.setFont("Helvetica", 11)
+                y = 750
+
+        pdf.save()
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="reporte_vehiculos.pdf", mimetype="application/pdf")
+    except Exception as e:
+        print("❌ Error generando PDF:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/exportar/excel", methods=["GET"])
+def exportar_excel():
+    try:
+        data = obtener_accesos_detalle()
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Vehículos"
+
+        # Encabezados
+        ws.append(["Placa", "Tipo", "Color", "Propietario", "Resultado"])
+
+        # Filas de datos
+        for d in data:
+            ws.append([d["placa"], d["tipo"], d["color"], d["propietario"], d["resultado"]])
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="reporte_vehiculos.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except Exception as e:
+        print("❌ Error generando Excel:", e)
+        return jsonify({"error": str(e)}), 500
+
+# ================================================
 @app.route("/api/usuario", methods=["GET"])
 @token_requerido
 def obtener_usuario():

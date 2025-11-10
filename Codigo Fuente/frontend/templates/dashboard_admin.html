@@ -2,23 +2,58 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Administrador | SmartCar</title>
+  <title>SmartCar | Panel Administrador</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <script src="{{ url_for('static', filename='js/dashboard_admin.js') }}" defer></script>
 </head>
 <body>
-  <div class="container">
-    <h1>🚗 Panel del Administrador</h1>
-    <p>Bienvenido, <strong>{{ usuario }}</strong>.</p>
-    <button onclick="cerrarSesion()">Cerrar sesión</button>
-  </div>
+  <nav class="navbar">
+    <div class="nav-left">
+      <img src="{{ url_for('static', filename='img/SmartCar.png') }}" class="logo">
+    </div>
+    <div class="nav-right">
+      <a href="/dashboard_admin" class="nav-link active">🏠 Inicio</a>
+      <span class="usuario-logueado">👤 Administrador</span>
+      <button id="btnLogout" class="btn-logout">Cerrar sesión</button>
+    </div>
+  </nav>
 
-  <script>
-    function cerrarSesion() {
-      localStorage.removeItem("jwt_token");
-      localStorage.removeItem("user_info");
-      window.location.href = "/";
-    }
-  </script>
+  <main>
+    <section class="tarjeta">
+      <h2>Resumen General</h2>
+      <p>Total Vehículos: <span id="totalVehiculos">0</span></p>
+      <p>Total Accesos: <span id="totalAccesos">0</span></p>
+      <p>Total Alertas: <span id="totalAlertas">0</span></p>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Registrar Vigilante</h2>
+      <input id="nombre" placeholder="Nombre completo">
+      <input id="doc" placeholder="Documento">
+      <input id="telefono" placeholder="Teléfono">
+      <select id="rol"><option value="1">Principal</option><option value="2">Nocturno</option></select>
+      <button id="btnRegistrar">Registrar</button>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Historial de Accesos</h2>
+      <button id="btnPDF">📄 Exportar PDF</button>
+      <button id="btnExcel">📊 Exportar Excel</button>
+      <table>
+                <thead>
+            <tr>
+              <th>Placa</th>
+              <th>Tipo</th>
+              <th>Color</th>
+              <th>Propietario</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+
+
+        <tbody id="tablaAccesos"></tbody>
+      </table>
+    </section>
+  </main>
 </body>
 </html>
