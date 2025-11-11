@@ -1,20 +1,20 @@
 # backend/core/controller_vehiculos.py
-# Lógica de negocio para el CRUD de Vehiculos y Auditoría
+# Lógica de negocio para el CRUD de Vehiculos (Alineado con bd_carros.sql)
 
 import json
-from models.vehiculo import Vehiculo
-from core.db import get_db_connection
-from core.auth import get_vigilante_id_from_token 
-# Importamos la función de auditoría del controlador de personas
-# NOTA: En un proyecto real, _registrar_auditoria debería ir en core/utils.py o core/auditoria_utils.py
+from models.vehiculo import Vehiculo # Importa el modelo corregido
+from core.db.connection import get_connection
+
+# Importamos la función de auditoría CORREGIDA del controlador de personas
 from core.controller_personas import _registrar_auditoria 
 
 
-# --- Funciones del CRUD de Vehiculos ---
+# --- Funciones del CRUD de Vehiculos (Corregido) ---
 
 def obtener_vehiculos_controller():
     """
-    Obtiene todos los vehículos de la base de datos, incluyendo datos del propietario.
+    Obtiene todos los vehículos, incluyendo datos del propietario.
+    Usa los campos del script SQL.
     """
     conn = None
     cursor = None
@@ -22,16 +22,15 @@ def obtener_vehiculos_controller():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
-        # Query que trae la información del vehículo y une los datos del propietario
+        # Query corregida: une vehiculo con persona para obtener el 'nombre'
         query = """
         SELECT 
-            v.*, 
-            p.nombres AS propietario_nombres, 
-            p.apellidos AS propietario_apellidos,
+            v.id_vehiculo, v.placa, v.tipo, v.color, v.id_persona,
+            p.nombre AS propietario_nombre, 
             p.doc_identidad AS propietario_doc_identidad
-        FROM Vehiculo v
-        JOIN Persona p ON v.id_propietario = p.id_persona
-        WHERE v.estado = TRUE;
+        FROM vehiculo v
+        JOIN persona p ON v.id_persona = p.id_persona
+        WHERE p.estado = 1; 
         """
         cursor.execute(query)
         vehiculos_db = cursor.fetchall()
@@ -39,24 +38,33 @@ def obtener_vehiculos_controller():
         # Formato de respuesta con la información del dueño
         vehiculos_lista = []
         for v in vehiculos_db:
-            vehiculo_data = Vehiculo(**v).to_dict()
-            vehiculo_data['propietario'] = {
-                'id_persona': v['id_propietario'],
-                'nombres': v['propietario_nombres'],
-                'apellidos': v['propietario_apellidos'],
-                'doc_identidad': v['propietario_doc_identidad']
+            vehiculo_data = {
+                "id_vehiculo": v['id_vehiculo'],
+                "placa": v['placa'],
+                "tipo": v['tipo'],
+                "color": v['color'],
+                "id_persona": v['id_persona'],
+                "propietario": {
+                    "id_persona": v['id_persona'],
+                    "nombre": v['propietario_nombre'],
+                    "doc_identidad": v['propietario_doc_identidad']
+                }
             }
             vehiculos_lista.append(vehiculo_data)
 
         return vehiculos_lista
         
+    except Exception as e:
+        print(f"Error en obtener_vehiculos_controller: {e}")
+        raise Exception(f"Error interno al obtener vehículos: {str(e)}")
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
 
 def crear_vehiculo_controller(data, headers):
     """
-    Crea un nuevo vehículo en la base de datos e inserta registro de auditoría.
+    Crea un nuevo vehículo.
+    Usa los campos 'tipo' y 'color' del script SQL.
     """
     conn = None
     cursor = None
@@ -70,37 +78,43 @@ def crear_vehiculo_controller(data, headers):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 1. Verificar si el id_propietario existe (Integridad referencial)
-        cursor.execute("SELECT id_persona FROM Persona WHERE id_persona = %s AND estado = TRUE", (nuevo_vehiculo.id_propietario,))
+        # 1. Verificar si id_persona (propietario) existe
+        cursor.execute("SELECT id_persona FROM persona WHERE id_persona = %s AND estado = 1", (nuevo_vehiculo.id_persona,))
         if not cursor.fetchone():
-            raise ValueError(f"El Propietario con ID {nuevo_vehiculo.id_propietario} no existe o está inactivo.")
+            raise ValueError(f"La Persona (propietario) con ID {nuevo_vehiculo.id_persona} no existe o está inactiva.")
             
-        # 2. Insertar Vehiculo
+        # 2. Insertar Vehiculo (Campos corregidos)
         query = """
-        INSERT INTO Vehiculo (placa, id_propietario, marca, modelo, color, tipo_vehiculo, estado)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO vehiculo (placa, tipo, color, id_persona)
+        VALUES (%s, %s, %s, %s)
         """
         cursor.execute(query, (
-            nuevo_vehiculo.placa, nuevo_vehiculo.id_propietario, nuevo_vehiculo.marca,
-            nuevo_vehiculo.modelo, nuevo_vehiculo.color, nuevo_vehiculo.tipo_vehiculo,
-            nuevo_vehiculo.estado
+            nuevo_vehiculo.placa,
+            nuevo_vehiculo.tipo,  # Corregido
+            nuevo_vehiculo.color, # Corregido
+            nuevo_vehiculo.id_persona
         ))
         
         id_vehiculo_nuevo = cursor.lastrowid
         conn.commit()
         
-        # 3. Registrar Auditoría (Tu tarea)
+        # 3. Registrar Auditoría (Corregido)
         nuevo_vehiculo.id_vehiculo = id_vehiculo_nuevo
         _registrar_auditoria(
-            id_vigilante=id_vigilante_actual, accion='CREAR', tabla='Vehiculo',
-            id_registro=id_vehiculo_nuevo, valor_anterior=None, valor_nuevo=nuevo_vehiculo.to_dict()
+            id_vigilante=id_vigilante_actual,
+            entidad='vehiculo',           # Corregido
+            id_entidad=id_vehiculo_nuevo, # Corregido
+            accion='CREAR',
+            datos_previos=None,           # Corregido
+            datos_nuevos=nuevo_vehiculo.to_dict() # Corregido
         )
         
         return id_vehiculo_nuevo
 
     except Exception as e:
         if conn: conn.rollback()
-        raise e 
+        print(f"Error en crear_vehiculo_controller: {e}")
+        raise Exception(f"Error interno al crear vehículo: {str(e)}")
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
@@ -108,7 +122,8 @@ def crear_vehiculo_controller(data, headers):
 
 def actualizar_vehiculo_controller(id_vehiculo, data, headers):
     """
-    Actualiza un vehículo existente e inserta registro de auditoría.
+    Actualiza un vehículo existente.
+    Usa los campos 'tipo' y 'color' del script SQL.
     """
     conn = None
     cursor = None
@@ -121,7 +136,7 @@ def actualizar_vehiculo_controller(id_vehiculo, data, headers):
         cursor = conn.cursor(dictionary=True)
 
         # 1. Obtener estado ANTERIOR (para Auditoría)
-        cursor.execute("SELECT * FROM Vehiculo WHERE id_vehiculo = %s", (id_vehiculo,))
+        cursor.execute("SELECT * FROM vehiculo WHERE id_vehiculo = %s", (id_vehiculo,))
         vehiculo_anterior_db = cursor.fetchone()
         
         if not vehiculo_anterior_db:
@@ -129,44 +144,48 @@ def actualizar_vehiculo_controller(id_vehiculo, data, headers):
         
         vehiculo_anterior = Vehiculo(**vehiculo_anterior_db)
         
-        # 2. Verificar nuevo id_propietario si se proporciona
+        # 2. Crear objeto actualizado y verificar propietario
         vehiculo_actualizado = Vehiculo.from_dict(data)
-        if vehiculo_actualizado.id_propietario is not None:
-             cursor.execute("SELECT id_persona FROM Persona WHERE id_persona = %s AND estado = TRUE", (vehiculo_actualizado.id_propietario,))
-             if not cursor.fetchone():
-                 raise ValueError(f"El nuevo Propietario con ID {vehiculo_actualizado.id_propietario} no existe o está inactivo.")
-        else:
-             vehiculo_actualizado.id_propietario = vehiculo_anterior.id_propietario # Mantener el anterior si no se actualiza
-
         vehiculo_actualizado.id_vehiculo = id_vehiculo 
 
-        # 3. Ejecutar la actualización
+        cursor.execute("SELECT id_persona FROM persona WHERE id_persona = %s AND estado = 1", (vehiculo_actualizado.id_persona,))
+        if not cursor.fetchone():
+            raise ValueError(f"La nueva Persona (propietario) con ID {vehiculo_actualizado.id_persona} no existe o está inactiva.")
+
+        # 3. Ejecutar la actualización (Campos corregidos)
         query = """
-        UPDATE Vehiculo SET
-            placa = %s, id_propietario = %s, marca = %s,
-            modelo = %s, color = %s, tipo_vehiculo = %s, estado = %s
+        UPDATE vehiculo SET
+            placa = %s,
+            tipo = %s,
+            color = %s,
+            id_persona = %s
         WHERE id_vehiculo = %s
         """
         cursor.execute(query, (
-            vehiculo_actualizado.placa, vehiculo_actualizado.id_propietario, vehiculo_actualizado.marca,
-            vehiculo_actualizado.modelo, vehiculo_actualizado.color, vehiculo_actualizado.tipo_vehiculo,
-            vehiculo_actualizado.estado, id_vehiculo
+            vehiculo_actualizado.placa,
+            vehiculo_actualizado.tipo,    # Corregido
+            vehiculo_actualizado.color,   # Corregido
+            vehiculo_actualizado.id_persona,
+            id_vehiculo
         ))
         
         conn.commit()
 
-        # 4. Registrar Auditoría (Tu tarea)
+        # 4. Registrar Auditoría (Corregido)
         _registrar_auditoria(
-            id_vigilante=id_vigilante_actual, accion='ACTUALIZAR', tabla='Vehiculo',
-            id_registro=id_vehiculo,
-            valor_anterior=vehiculo_anterior.to_dict(),
-            valor_nuevo=vehiculo_actualizado.to_dict()
+            id_vigilante=id_vigilante_actual,
+            entidad='vehiculo',            # Corregido
+            id_entidad=id_vehiculo,        # Corregido
+            accion='ACTUALIZAR',
+            datos_previos=vehiculo_anterior.to_dict(), # Corregido
+            datos_nuevos=vehiculo_actualizado.to_dict() # Corregido
         )
         return True
 
     except Exception as e:
         if conn: conn.rollback()
-        raise e 
+        print(f"Error en actualizar_vehiculo_controller: {e}")
+        raise Exception(f"Error interno al actualizar vehículo: {str(e)}")
     finally:
         if cursor: cursor.close()
         if conn: conn.close()

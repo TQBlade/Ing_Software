@@ -1,25 +1,16 @@
 # backend/models/persona.py
-# Representación de la tabla Persona [cite: 26, 27]
+# Representación de la tabla 'persona' (alineada con bd_carros.sql)
 
 class Persona:
-    def __init__(self, id_persona, doc_identidad, nombres, apellidos, tipo_persona, email=None, telefono=None, estado=True):
+    def __init__(self, id_persona, doc_identidad, nombre, tipo_persona, estado=1):
         """
-        Clase que representa a una Persona (Propietario, Visitante, etc.).
+        Clase que representa a una Persona (Estudiante, Docente, etc.).
         """
         self.id_persona = id_persona
         self.doc_identidad = doc_identidad
-        self.nombres = nombres
-        self.apellidos = apellidos
-        self.tipo_persona = tipo_persona  # Ej: 'Propietario', 'Visitante', 'Empleado'
-        self.email = email
-        self.telefono = telefono
-        self.estado = estado  # Activo/Inactivo
-
-    def __str__(self):
-        """
-        Representación en string de la persona.
-        """
-        return f"{self.nombres} {self.apellidos} (ID: {self.doc_identidad})"
+        self.nombre = nombre
+        self.tipo_persona = tipo_persona  # 'ESTUDIANTE', 'DOCENTE', 'ADMINISTRATIVO'
+        self.estado = estado              # 1 = Activo, 0 = Eliminado (según tmstatus)
 
     def to_dict(self):
         """
@@ -28,11 +19,8 @@ class Persona:
         return {
             "id_persona": self.id_persona,
             "doc_identidad": self.doc_identidad,
-            "nombres": self.nombres,
-            "apellidos": self.apellidos,
+            "nombre": self.nombre,
             "tipo_persona": self.tipo_persona,
-            "email": self.email,
-            "telefono": self.telefono,
             "estado": self.estado
         }
 
@@ -44,10 +32,7 @@ class Persona:
         return Persona(
             id_persona=data.get("id_persona"),
             doc_identidad=data.get("doc_identidad"),
-            nombres=data.get("nombres"),
-            apellidos=data.get("apellidos"),
+            nombre=data.get("nombre"),
             tipo_persona=data.get("tipo_persona"),
-            email=data.get("email"),
-            telefono=data.get("telefono"),
-            estado=data.get("estado", True)
+            estado=data.get("estado", 1)
         )

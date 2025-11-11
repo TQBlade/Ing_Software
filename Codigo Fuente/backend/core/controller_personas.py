@@ -1,69 +1,79 @@
-# backend/core/services/controller_personas.py
-# Lógica de negocio PURA para Personas.
-# Este archivo NO sabe de Flask. Solo hace el trabajo.
+# backend/core/controller_personas.py
+# Lógica de negocio para el CRUD de Personas y Auditoría (Alineado con bd_carros.sql)
 
 import json
-from models.persona import Persona
-from models.auditoria import Auditoria
-from core.db import get_db_connection # Asumo que db.py está en core/
-from core.auth import get_vigilante_id_from_token # Asumo que auth.py está en core/
+from models.persona import Persona  # Importa el modelo corregido
+from core.db.connection import get_connection
+# Asumo que auth.py está en core/
 
-# --- Función de Auditoría (Tu Tarea) ---
+# --- Función de Auditoría (Corregida para bd_carros.sql) ---
 
-def _registrar_auditoria(id_vigilante, accion, tabla, id_registro, valor_anterior, valor_nuevo):
+def _registrar_auditoria(id_vigilante, entidad, id_entidad, accion, datos_previos=None, datos_nuevos=None):
     """
-    Función helper para insertar un registro de auditoría en la BD.
+    Función helper para insertar un registro de auditoría.
+    Usa los nombres de columna de la tabla 'auditoria' del script SQL.
     """
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
         query = """
-        INSERT INTO Auditoria (id_vigilante, accion, tabla_afectada, id_registro_afectado, valor_anterior, valor_nuevo)
+        INSERT INTO auditoria (id_vigilante, entidad, id_entidad, accion, datos_previos, datos_nuevos)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        val_ant_str = json.dumps(valor_anterior) if valor_anterior else None
-        val_nue_str = json.dumps(valor_nuevo) if valor_nuevo else None
         
-        cursor.execute(query, (id_vigilante, accion, tabla, id_registro, val_ant_str, val_nue_str))
+        # Convertimos los dicts a JSON string para guardar en la BD
+        val_ant_str = json.dumps(datos_previos) if datos_previos else None
+        val_nue_str = json.dumps(datos_nuevos) if datos_nuevos else None
+        
+        cursor.execute(query, (id_vigilante, entidad, id_entidad, accion, val_ant_str, val_nue_str))
         conn.commit()
-        print(f"[Auditoria] Registro creado: {accion} en {tabla} por vigilante {id_vigilante}")
+        print(f"[Auditoria] Registro creado: {accion} en {entidad} (ID: {id_entidad}) por vigilante {id_vigilante}")
+        
     except Exception as e:
-        if conn: conn.rollback()
+        if conn:
+            conn.rollback()
         print(f"Error al registrar auditoría: {e}")
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
-# --- Funciones del CRUD de Personas ---
+# --- Funciones del CRUD de Personas (Corregido) ---
 
 def obtener_personas_controller():
     """
-    Obtiene todas las personas.
-    Devuelve: Lista de diccionarios de personas.
-    Lanza: Excepción si algo falla.
+    Obtiene todas las personas activas.
+    Usa los campos 'nombre' y 'estado' (INT) del script SQL.
     """
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Persona WHERE estado = TRUE")
+        cursor = conn.cursor(dictionary=True) 
+        
+        # estado = 1 es 'ACTIVO' según la tabla tmstatus
+        cursor.execute("SELECT * FROM persona WHERE estado = 1")
         personas_db = cursor.fetchall()
         
-        # Convertir resultados a una lista de diccionarios
         return [Persona(**p).to_dict() for p in personas_db]
         
+    except Exception as e:
+        print(f"Error en obtener_personas_controller: {e}")
+        raise Exception(f"Error interno al obtener personas: {str(e)}")
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def crear_persona_controller(data, headers):
     """
     Crea una nueva persona.
-    Devuelve: El ID de la nueva persona.
-    Lanza: Excepción si algo falla o el token es inválido.
+    Usa los campos 'nombre' y 'estado' (INT) del script SQL.
     """
     conn = None
     cursor = None
@@ -72,41 +82,53 @@ def crear_persona_controller(data, headers):
         
         id_vigilante_actual = get_vigilante_id_from_token(headers)
         if not id_vigilante_actual:
-            raise ValueError("Token inválido o ausente") # El Blueprint capturará esto
+            raise ValueError("Token inválido o ausente")
 
         conn = get_db_connection()
         cursor = conn.cursor()
+        
         query = """
-        INSERT INTO Persona (doc_identidad, nombres, apellidos, tipo_persona, email, telefono, estado)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO persona (doc_identidad, nombre, tipo_persona, estado)
+        VALUES (%s, %s, %s, %s)
         """
         cursor.execute(query, (
-            nueva_persona.doc_identidad, nueva_persona.nombres, nueva_persona.apellidos,
-            nueva_persona.tipo_persona, nueva_persona.email, nueva_persona.telefono,
-            nueva_persona.estado
+            nueva_persona.doc_identidad,
+            nueva_persona.nombre, # Corregido
+            nueva_persona.tipo_persona,
+            nueva_persona.estado          # Corregido (es INT)
         ))
         
         id_persona_nueva = cursor.lastrowid
         conn.commit()
         
-        # Registrar Auditoría
+        # Registrar Auditoría (Corregido)
         nueva_persona.id_persona = id_persona_nueva
-        _registrar_auditoria(id_vigilante_actual, 'CREAR', 'Persona', id_persona_nueva, None, nueva_persona.to_dict())
+        _registrar_auditoria(
+            id_vigilante=id_vigilante_actual,
+            entidad='persona',            # Corregido
+            id_entidad=id_persona_nueva,  # Corregido
+            accion='CREAR',
+            datos_previos=None,           # Corregido
+            datos_nuevos=nueva_persona.to_dict() # Corregido
+        )
         
         return id_persona_nueva
 
     except Exception as e:
-        if conn: conn.rollback()
-        raise e # Relanzamos la excepción para que el Blueprint la maneje
+        if conn:
+            conn.rollback()
+        print(f"Error en crear_persona_controller: {e}")
+        raise Exception(f"Error interno al crear persona: {str(e)}")
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 def actualizar_persona_controller(id_persona, data, headers):
     """
     Actualiza una persona existente.
-    Devuelve: True si fue exitoso.
-    Lanza: Excepción si algo falla o no se encuentra la persona.
+    Usa los campos 'nombre' y 'estado' (INT) del script SQL.
     """
     conn = None
     cursor = None
@@ -118,44 +140,57 @@ def actualizar_persona_controller(id_persona, data, headers):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # Obtener estado ANTERIOR (para Auditoría)
-        cursor.execute("SELECT * FROM Persona WHERE id_persona = %s", (id_persona,))
+        # 1. Obtener estado ANTERIOR (para Auditoría)
+        cursor.execute("SELECT * FROM persona WHERE id_persona = %s", (id_persona,))
         persona_anterior_db = cursor.fetchone()
         
         if not persona_anterior_db:
-            raise ValueError("Persona no encontrada") # El Blueprint lo convertirá en 404
+            raise ValueError("Persona no encontrada")
         
         persona_anterior = Persona(**persona_anterior_db)
+        
+        # 2. Crear el objeto actualizado
         persona_actualizada = Persona.from_dict(data)
-        persona_actualizada.id_persona = id_persona # Aseguramos ID
+        persona_actualizada.id_persona = id_persona
 
-        # Ejecutar actualización
+        # 3. Ejecutar la actualización
         query = """
-        UPDATE Persona SET
-            doc_identidad = %s, nombres = %s, apellidos = %s,
-            tipo_persona = %s, email = %s, telefono = %s, estado = %s
+        UPDATE persona SET
+            doc_identidad = %s,
+            nombre = %s,
+            tipo_persona = %s,
+            estado = %s
         WHERE id_persona = %s
         """
         cursor.execute(query, (
-            persona_actualizada.doc_identidad, persona_actualizada.nombres, persona_actualizada.apellidos,
-            persona_actualizada.tipo_persona, persona_actualizada.email, persona_actualizada.telefono,
-            persona_actualizada.estado, id_persona
+            persona_actualizada.doc_identidad,
+            persona_actualizada.nombre,         # Corregido
+            persona_actualizada.tipo_persona,
+            persona_actualizada.estado,         # Corregido
+            id_persona
         ))
         
         conn.commit()
 
-        # Registrar Auditoría
+        # 4. Registrar Auditoría (Corregido)
         _registrar_auditoria(
-            id_vigilante=id_vigilante_actual, accion='ACTUALIZAR', tabla='Persona',
-            id_registro=id_persona,
-            valor_anterior=persona_anterior.to_dict(),
-            valor_nuevo=persona_actualizada.to_dict()
+            id_vigilante=id_vigilante_actual,
+            entidad='persona',             # Corregido
+            id_entidad=id_persona,         # Corregido
+            accion='ACTUALIZAR',
+            datos_previos=persona_anterior.to_dict(), # Corregido
+            datos_nuevos=persona_actualizada.to_dict() # Corregido
         )
+        
         return True
 
     except Exception as e:
-        if conn: conn.rollback()
-        raise e # Relanzamos la excepción
+        if conn:
+            conn.rollback()
+        print(f"Error en actualizar_persona_controller: {e}")
+        raise Exception(f"Error interno al actualizar persona: {str(e)}")
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

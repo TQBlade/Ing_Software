@@ -1,25 +1,16 @@
 # backend/models/vehiculo.py
-# Representación de la tabla Vehiculo
+# Representación de la tabla 'vehiculo' (alineada con bd_carros.sql)
 
 class Vehiculo:
-    def __init__(self, id_vehiculo, placa, id_propietario, marca, modelo, color, tipo_vehiculo, estado=True):
+    def __init__(self, id_vehiculo, placa, tipo, color, id_persona):
         """
         Clase que representa un Vehículo.
         """
         self.id_vehiculo = id_vehiculo
-        self.placa = placa.upper() # Siempre en mayúsculas para consistencia
-        self.id_propietario = id_propietario # Clave foránea a Persona
-        self.marca = marca
-        self.modelo = modelo
+        self.placa = placa.upper()
+        self.tipo = tipo          # 'Automovil', 'Motocicleta'
         self.color = color
-        self.tipo_vehiculo = tipo_vehiculo # Ej: 'Carro', 'Moto', 'Bicicleta'
-        self.estado = estado  # Activo/Inactivo
-
-    def __str__(self):
-        """
-        Representación en string del vehículo.
-        """
-        return f"Placa: {self.placa} ({self.marca} {self.modelo})"
+        self.id_persona = id_persona  # Clave foránea a Persona
 
     def to_dict(self):
         """
@@ -28,12 +19,9 @@ class Vehiculo:
         return {
             "id_vehiculo": self.id_vehiculo,
             "placa": self.placa,
-            "id_propietario": self.id_propietario,
-            "marca": self.marca,
-            "modelo": self.modelo,
+            "tipo": self.tipo,
             "color": self.color,
-            "tipo_vehiculo": self.tipo_vehiculo,
-            "estado": self.estado
+            "id_persona": self.id_persona
         }
 
     @staticmethod
@@ -44,10 +32,7 @@ class Vehiculo:
         return Vehiculo(
             id_vehiculo=data.get("id_vehiculo"),
             placa=data.get("placa", "").upper(),
-            id_propietario=data.get("id_propietario"),
-            marca=data.get("marca"),
-            modelo=data.get("modelo"),
+            tipo=data.get("tipo"),
             color=data.get("color"),
-            tipo_vehiculo=data.get("tipo_vehiculo"),
-            estado=data.get("estado", True)
+            id_persona=data.get("id_persona")
         )
