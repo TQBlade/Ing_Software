@@ -2,7 +2,7 @@
 # Define los Endpoints (/api/vehiculos) usando un Blueprint de Flask.
 
 from flask import Blueprint, request, jsonify
-# Importación corregida a la ruta core/controller_vehiculos.py
+# Importamos la lógica del controlador (corregido)
 from core.controller_vehiculos import (
     obtener_vehiculos_controller,
     crear_vehiculo_controller,
@@ -18,7 +18,7 @@ vehiculos_bp = Blueprint('vehiculos_bp', __name__)
 @vehiculos_bp.route('/api/vehiculos', methods=['GET'])
 def get_vehiculos():
     """
-    Endpoint para OBTENER todos los vehículos.
+    Endpoint para OBTENER todos los vehículos (con datos del propietario).
     """
     try:
         vehiculos = obtener_vehiculos_controller()
@@ -26,7 +26,7 @@ def get_vehiculos():
         
     except Exception as e:
         print(f"Error en GET /api/vehiculos: {e}")
-        return jsonify({"error": "Error interno del servidor", "detalle": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 # POST /api/vehiculos
 @vehiculos_bp.route('/api/vehiculos', methods=['POST'])
@@ -45,12 +45,12 @@ def create_vehiculo():
         
         return jsonify({"mensaje": "Vehículo creado exitosamente", "id_vehiculo": nuevo_id}), 201
 
-    except ValueError as ve: # Errores de validación (token, propietario no existe, etc.)
+    except ValueError as ve: # Errores de validación (token, propietario no existe)
         status_code = 401 if "Token" in str(ve) else 400
         return jsonify({"error": str(ve)}), status_code
     except Exception as e:
         print(f"Error en POST /api/vehiculos: {e}")
-        return jsonify({"error": "Error interno del servidor", "detalle": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 # PUT /api/vehiculos/<int:id_vehiculo>
 @vehiculos_bp.route('/api/vehiculos/<int:id_vehiculo>', methods=['PUT'])
@@ -72,9 +72,9 @@ def update_vehiculo(id_vehiculo):
     except ValueError as ve:
         if "no encontrado" in str(ve):
             return jsonify({"error": str(ve)}), 404
-        else: # Error de token, validación, etc.
+        else: # Error de token, propietario no existe, etc.
             status_code = 401 if "Token" in str(ve) else 400
             return jsonify({"error": str(ve)}), status_code
     except Exception as e:
         print(f"Error en PUT /api/vehiculos/{id_vehiculo}: {e}")
-        return jsonify({"error": "Error interno del servidor", "detalle": str(e)}), 500
+        return jsonify({"error": str(e)}), 500

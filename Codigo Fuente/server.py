@@ -15,6 +15,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend
 from backend.core.db.connection import get_connection
 from backend.models.user_model import verificar_usuario
 
+# ===========================================================  
+# IMPORTAR RUTAS DE PERSONAS Y VEHÍCULOS
+from backend.core.controller_personas import (
+    obtener_personas_controller,
+    crear_persona_controller,
+    actualizar_persona_controller
+)
+from backend.core.controller_vehiculos import (
+    obtener_vehiculos_controller,
+    crear_vehiculo_controller,
+    actualizar_vehiculo_controller
+)
+#  ===========================================================
+# IMPORTAR FUNCIONES DE AUDITORÍA
+from backend.models.auditoria import obtener_historial_auditoria
 
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -191,6 +206,25 @@ def api_registrar_vigilante():
     return jsonify({"error": "No se pudo registrar"}), 500
 
 
+@app.route("/api/admin/auditoria", methods=["GET"])
+@token_requerido
+def api_admin_auditoria():
+    """
+    Endpoint para OBTENER el historial de auditoría.
+    Protegido por token.
+    """
+    try:
+        # Opcional: Verificar si el rol es 'Administrador'
+        if request.usuario_actual.get('rol') != 'Administrador':
+            return jsonify({"error": "Acceso no autorizado"}), 403
+            
+        historial = obtener_historial_auditoria()
+        return jsonify(historial), 200
+    except Exception as e:
+        print(f"❌ Error obteniendo historial de auditoría: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
+    
+
 @app.route("/api/admin/exportar/pdf", methods=["GET"])
 def exportar_pdf():
     try:
@@ -260,6 +294,108 @@ def exportar_excel():
         )
     except Exception as e:
         print("❌ Error generando Excel:", e)
+        return jsonify({"error": str(e)}), 500
+
+# ===========================================================
+# --- CRUD de Personas ---
+
+@app.route("/api/personas", methods=["GET"])
+@token_requerido
+def get_personas():
+    """Endpoint para OBTENER todas las personas activas."""
+    try:
+        personas = obtener_personas_controller()
+        return jsonify(personas), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/personas", methods=["POST"])
+@token_requerido
+def create_persona():
+    """Endpoint para CREAR una nueva persona."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
+        
+        # NOTA DE AUDITORÍA:
+        # Para implementar la auditoría, necesitaríamos pasar el 'id_vigilante'.
+        # El token (request.usuario_actual) solo tiene el email.
+        # nuevo_id = crear_persona_controller(data, request.usuario_actual)
+        
+        # Versión sin auditoría (temporal):
+        nuevo_id = crear_persona_controller(data, request.headers) # Usamos headers solo por compatibilidad de la función
+        
+        return jsonify({"mensaje": "Persona creada exitosamente", "id_persona": nuevo_id}), 201
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/personas/<int:id_persona>", methods=["PUT"])
+@token_requerido
+def update_persona(id_persona):
+    """Endpoint para ACTUALIZAR una persona existente."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
+        
+        # Versión sin auditoría (temporal):
+        actualizar_persona_controller(id_persona, data, request.headers)
+        
+        return jsonify({"mensaje": "Persona actualizada exitosamente"}), 200
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 404 if "no encontrada" in str(ve) else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- CRUD de Vehículos ---
+
+@app.route("/api/vehiculos", methods=["GET"])
+@token_requerido
+def get_vehiculos():
+    """Endpoint para OBTENER todos los vehículos."""
+    try:
+        vehiculos = obtener_vehiculos_controller()
+        return jsonify(vehiculos), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/vehiculos", methods=["POST"])
+@token_requerido
+def create_vehiculo():
+    """Endpoint para CREAR un nuevo vehículo."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
+        
+        # Versión sin auditoría (temporal):
+        nuevo_id = crear_vehiculo_controller(data, request.headers)
+        
+        return jsonify({"mensaje": "Vehículo creado exitosamente", "id_vehiculo": nuevo_id}), 201
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/vehiculos/<int:id_vehiculo>", methods=["PUT"])
+@token_requerido
+def update_vehiculo(id_vehiculo):
+    """Endpoint para ACTUALIZAR un vehículo existente."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
+        
+        # Versión sin auditoría (temporal):
+        actualizar_vehiculo_controller(id_vehiculo, data, request.headers)
+        
+        return jsonify({"mensaje": "Vehículo actualizado exitosamente"}), 200
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 404 if "no encontrado" in str(ve) else 400
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ================================================
