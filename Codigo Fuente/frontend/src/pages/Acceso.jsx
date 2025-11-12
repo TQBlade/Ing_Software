@@ -1,9 +1,22 @@
 import { useState } from 'react';
 
-// --- ICONOS SVG (Para no depender de librerías externas) ---
-const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
-const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
+// --- ICONOS SVG (¡CÓDIGO REAL AHORA!) ---
+const SearchIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+const CameraIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+const XIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
 
 export default function Accesos() {
   const [showModal, setShowModal] = useState(false);
@@ -119,7 +132,10 @@ export default function Accesos() {
             </div>
             {/* Cuerpo del Modal */}
             <div className="p-6">
-              <ValidationComponentInternal onClose={() => setShowModal(false)} />
+              <ValidationComponentInternal 
+                apiUrl="http://127.0.0.1:5000/api/accesos/validar" 
+                onClose={() => setShowModal(false)} 
+              />
             </div>
           </div>
         </div>
@@ -129,8 +145,10 @@ export default function Accesos() {
 }
 
 // --- COMPONENTE INTERNO DEL MODAL (Lógica de OCR) ---
-function ValidationComponentInternal({ onClose }) {
+// (Esta parte es la que tiene la lógica de conexión que te di)
+function ValidationComponentInternal({ apiUrl, onClose }) {
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [base64Image, setBase64Image] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [accessType, setAccessType] = useState('entrada');
@@ -138,17 +156,64 @@ function ValidationComponentInternal({ onClose }) {
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setPreviewUrl(URL.createObjectURL(file));
       setResult(null);
+      setPreviewUrl(URL.createObjectURL(file));
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = () => {
+        setBase64Image(reader.result);
+      };
     }
   };
 
-  const handleValidate = () => {
+  const handleValidate = async () => {
+    if (!base64Image) return;
+
     setIsLoading(true);
-    setTimeout(() => { // Simulación de API
+    setResult(null);
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_base64: base64Image,
+          tipo_acceso: accessType
+        })
+      });
+
+      if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
+
+      const data = await response.json();
+
+      if (data.resultado === 'Autorizado') {
+        setResult({ 
+          type: 'success', 
+          title: '¡ACCESO AUTORIZADO!', 
+          placa: data.datos.placa, 
+          propietario: data.datos.propietario 
+        });
+      } else {
+        setResult({ 
+          type: 'error', 
+          title: `¡ACCESO DENEGADO!`, 
+          placa: data.datos.placa || 'No detectada', 
+          propietario: data.datos.motivo 
+        });
+      }
+
+    } catch (error) {
+      console.error("Error al validar acceso:", error);
+      setResult({ 
+        type: 'error', 
+        title: 'Error de Conexión', 
+        placa: 'No se pudo conectar', 
+        propietario: 'Revisa la consola y el servidor backend.' 
+      });
+    } finally {
       setIsLoading(false);
-      setResult({ type: 'success', title: '¡ACCESO AUTORIZADO!', placa: 'ABC-123', propietario: 'Juan Pérez' });
-    }, 2000);
+    }
   };
 
   return (
@@ -164,7 +229,7 @@ function ValidationComponentInternal({ onClose }) {
         {!previewUrl ? (
           <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-red-50 hover:border-red-300 transition-all">
             <div className="p-4 bg-white rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
-              <CameraIcon className="h-8 w-8 text-red-500" />
+              <CameraIcon />
             </div>
             <span className="text-sm font-medium text-gray-600">Toca para subir foto</span>
             <span className="text-xs text-gray-400 mt-1">JPG, PNG</span>
@@ -173,7 +238,7 @@ function ValidationComponentInternal({ onClose }) {
         ) : (
           <div className="relative h-48 rounded-xl overflow-hidden shadow-md">
             <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-            <button onClick={() => { setPreviewUrl(null); setResult(null); }} className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full hover:bg-black/70 transition-colors">
+            <button onClick={() => { setPreviewUrl(null); setResult(null); setBase64Image(null); }} className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full hover:bg-black/70 transition-colors">
               <XIcon className="h-4 w-4" />
             </button>
           </div>
@@ -200,7 +265,7 @@ function ValidationComponentInternal({ onClose }) {
           <h4 className={`font-extrabold ${result.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>{result.title}</h4>
           <div className="mt-2 text-sm text-gray-700 space-y-1">
             <p>Placa: <span className="font-mono font-bold">{result.placa}</span></p>
-            <p>Propietario: <span className="font-medium">{result.propietario}</span></p>
+            <p>Info: <span className="font-medium">{result.propietario}</span></p>
           </div>
         </div>
       )}

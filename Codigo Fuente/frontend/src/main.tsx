@@ -1,13 +1,21 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'; // 👈 1. Importa esto
-import App from './App.tsx'
-import './index.css'; // Aquí están tus estilos de Tailwind
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// CORRECCIÓN CLAVE:
+// Importamos 'App.tsx' (con .tsx)
+import App from './App.tsx';
+
+// Importamos el CSS (que sí se llama index.css)
+import './index.css';
+
+// El '!' es para decirle a TypeScript que 'root' no es nulo
+const root = ReactDOM.createRoot(document.getElementById('root')!); 
+
+root.render(
   <React.StrictMode>
-    <BrowserRouter> {/* 👈 2. Envuelve tu <App> con esto */}
+    <BrowserRouter>
       <App />
     </BrowserRouter>
-  </React.StrictMode>,
-)
+  </React.StrictMode>
+);
