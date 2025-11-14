@@ -2,35 +2,39 @@
 # Lógica de negocio para el CRUD de Personas y Auditoría (Alineado con bd_carros.sql)
 
 import json
-from models.persona import Persona  # Importa el modelo corregido
+# CORREGIDO: Importación del modelo con la ruta completa
+from backend.models.persona import Persona 
 from core.db.connection import get_connection
-# Asumo que auth.py está en core/
+# CORREGIDO: Importación de Psycopg2 para cursores de diccionario
+from psycopg2.extras import RealDictCursor
 
 # --- Función de Auditoría (Corregida para bd_carros.sql) ---
 
 def _registrar_auditoria(id_vigilante, entidad, id_entidad, accion, datos_previos=None, datos_nuevos=None):
     """
     Función helper para insertar un registro de auditoría.
-    Usa los nombres de columna de la tabla 'auditoria' del script SQL.
     """
     conn = None
     cursor = None
     try:
-        conn = get_db_connection()
+        conn = get_connection()
         cursor = conn.cursor()
         
+        # --- CAMBIO CLAVE AQUÍ ---
+        # La columna ahora se llama 'id_usuario' en la BD
         query = """
-        INSERT INTO auditoria (id_vigilante, entidad, id_entidad, accion, datos_previos, datos_nuevos)
+        INSERT INTO auditoria (id_usuario, entidad, id_entidad, accion, datos_previos, datos_nuevos)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
+        # -------------------------
         
-        # Convertimos los dicts a JSON string para guardar en la BD
-        val_ant_str = json.dumps(datos_previos) if datos_previos else None
-        val_nue_str = json.dumps(datos_nuevos) if datos_nuevos else None
+        val_ant_str = json.dumps(datos_previos, default=str) if datos_previos else None
+        val_nue_str = json.dumps(datos_nuevos, default=str) if datos_nuevos else None
         
+        # Pasamos el 'id_vigilante' (que es el id_audit/nu) a la columna 'id_usuario'
         cursor.execute(query, (id_vigilante, entidad, id_entidad, accion, val_ant_str, val_nue_str))
         conn.commit()
-        print(f"[Auditoria] Registro creado: {accion} en {entidad} (ID: {id_entidad}) por vigilante {id_vigilante}")
+        print(f"[Auditoria] Registro creado: {accion} en {entidad} (ID: {id_entidad}) por usuario {id_vigilante}")
         
     except Exception as e:
         if conn:
@@ -41,25 +45,26 @@ def _registrar_auditoria(id_vigilante, entidad, id_entidad, accion, datos_previo
             cursor.close()
         if conn:
             conn.close()
-
 # --- Funciones del CRUD de Personas (Corregido) ---
 
 def obtener_personas_controller():
     """
     Obtiene todas las personas activas.
-    Usa los campos 'nombre' y 'estado' (INT) del script SQL.
     """
     conn = None
     cursor = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True) 
+        # CORREGIDO: Llamada a la función de conexión correcta
+        conn = get_connection()
+        # CORREGIDO: Sintaxis de cursor para Psycopg2
+        cursor = conn.cursor(cursor_factory=RealDictCursor) 
         
         # estado = 1 es 'ACTIVO' según la tabla tmstatus
         cursor.execute("SELECT * FROM persona WHERE estado = 1")
         personas_db = cursor.fetchall()
         
-        return [Persona(**p).to_dict() for p in personas_db]
+        # Devolvemos la lista de diccionarios directamente
+        return personas_db
         
     except Exception as e:
         print(f"Error en obtener_personas_controller: {e}")
@@ -70,46 +75,50 @@ def obtener_personas_controller():
         if conn:
             conn.close()
 
-def crear_persona_controller(data, headers):
+# CORREGIDO: La función ahora recibe 'usuario_actual' (del token) en lugar de 'headers'
+def crear_persona_controller(data, usuario_actual):
     """
     Crea una nueva persona.
-    Usa los campos 'nombre' y 'estado' (INT) del script SQL.
     """
     conn = None
     cursor = None
     try:
         nueva_persona = Persona.from_dict(data)
         
-        id_vigilante_actual = get_vigilante_id_from_token(headers)
+        # CORREGIDO: Obtenemos el ID de auditoría del token (como lo definimos en el Paso 1)
+        id_vigilante_actual = usuario_actual['id_audit']
         if not id_vigilante_actual:
-            raise ValueError("Token inválido o ausente")
+            raise ValueError("Token inválido o ID de auditoría ausente")
 
-        conn = get_db_connection()
+        # CORREGIDO: Llamada a la función de conexión correcta
+        conn = get_connection()
         cursor = conn.cursor()
         
         query = """
         INSERT INTO persona (doc_identidad, nombre, tipo_persona, estado)
         VALUES (%s, %s, %s, %s)
+        RETURNING id_persona
         """
         cursor.execute(query, (
             nueva_persona.doc_identidad,
-            nueva_persona.nombre, # Corregido
+            nueva_persona.nombre,
             nueva_persona.tipo_persona,
-            nueva_persona.estado          # Corregido (es INT)
+            nueva_persona.estado
         ))
         
-        id_persona_nueva = cursor.lastrowid
+        # CORREGIDO: Sintaxis de Psycopg2 para obtener el ID devuelto
+        id_persona_nueva = cursor.fetchone()[0]
         conn.commit()
         
-        # Registrar Auditoría (Corregido)
+        # Registrar Auditoría
         nueva_persona.id_persona = id_persona_nueva
         _registrar_auditoria(
             id_vigilante=id_vigilante_actual,
-            entidad='persona',            # Corregido
-            id_entidad=id_persona_nueva,  # Corregido
+            entidad='persona',
+            id_entidad=id_persona_nueva,
             accion='CREAR',
-            datos_previos=None,           # Corregido
-            datos_nuevos=nueva_persona.to_dict() # Corregido
+            datos_previos=None,
+            datos_nuevos=nueva_persona.to_dict() # La función _registrar ya hace el json.dumps
         )
         
         return id_persona_nueva
@@ -125,31 +134,37 @@ def crear_persona_controller(data, headers):
         if conn:
             conn.close()
 
-def actualizar_persona_controller(id_persona, data, headers):
+# CORREGIDO: La función ahora recibe 'usuario_actual'
+def actualizar_persona_controller(id_persona, data, usuario_actual):
     """
     Actualiza una persona existente.
-    Usa los campos 'nombre' y 'estado' (INT) del script SQL.
     """
     conn = None
     cursor = None
+    cursor_dict = None
     try:
-        id_vigilante_actual = get_vigilante_id_from_token(headers)
+        # CORREGIDO: Obtenemos el ID de auditoría del token
+        id_vigilante_actual = usuario_actual['id_audit']
         if not id_vigilante_actual:
-            raise ValueError("Token inválido o ausente")
+            raise ValueError("Token inválido o ID de auditoría ausente")
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-
+        # CORREGIDO: Llamada a la función de conexión correcta
+        conn = get_connection()
+        
         # 1. Obtener estado ANTERIOR (para Auditoría)
-        cursor.execute("SELECT * FROM persona WHERE id_persona = %s", (id_persona,))
-        persona_anterior_db = cursor.fetchone()
+        # CORREGIDO: Sintaxis de cursor para Psycopg2
+        cursor_dict = conn.cursor(cursor_factory=RealDictCursor)
+        cursor_dict.execute("SELECT * FROM persona WHERE id_persona = %s", (id_persona,))
+        persona_anterior_db = cursor_dict.fetchone()
+        cursor_dict.close()
         
         if not persona_anterior_db:
             raise ValueError("Persona no encontrada")
         
         persona_anterior = Persona(**persona_anterior_db)
         
-        # 2. Crear el objeto actualizado
+        # 2. Iniciar transacción con cursor estándar
+        cursor = conn.cursor()
         persona_actualizada = Persona.from_dict(data)
         persona_actualizada.id_persona = id_persona
 
@@ -164,22 +179,22 @@ def actualizar_persona_controller(id_persona, data, headers):
         """
         cursor.execute(query, (
             persona_actualizada.doc_identidad,
-            persona_actualizada.nombre,         # Corregido
+            persona_actualizada.nombre,
             persona_actualizada.tipo_persona,
-            persona_actualizada.estado,         # Corregido
+            persona_actualizada.estado,
             id_persona
         ))
         
         conn.commit()
 
-        # 4. Registrar Auditoría (Corregido)
+        # 4. Registrar Auditoría
         _registrar_auditoria(
             id_vigilante=id_vigilante_actual,
-            entidad='persona',             # Corregido
-            id_entidad=id_persona,         # Corregido
+            entidad='persona',
+            id_entidad=id_persona,
             accion='ACTUALIZAR',
-            datos_previos=persona_anterior.to_dict(), # Corregido
-            datos_nuevos=persona_actualizada.to_dict() # Corregido
+            datos_previos=persona_anterior.to_dict(),
+            datos_nuevos=persona_actualizada.to_dict()
         )
         
         return True
@@ -194,3 +209,50 @@ def actualizar_persona_controller(id_persona, data, headers):
             cursor.close()
         if conn:
             conn.close()
+
+def desactivar_persona_controller(id_persona, usuario_actual):
+    """
+    Desactiva una persona (borrado lógico) actualizando su estado a 0.
+    """
+    conn = None
+    cursor = None
+    try:
+        id_vigilante_actual = usuario_actual['id_audit']
+        conn = get_connection()
+        
+        # 1. Obtener estado anterior para auditoría
+        cursor_dict = conn.cursor(cursor_factory=RealDictCursor)
+        cursor_dict.execute("SELECT * FROM persona WHERE id_persona = %s", (id_persona,))
+        persona_anterior_db = cursor_dict.fetchone()
+        cursor_dict.close()
+        
+        if not persona_anterior_db:
+            raise ValueError("Persona no encontrada")
+
+        persona_anterior = Persona(**persona_anterior_db)
+        
+        # 2. Ejecutar el borrado lógico (actualizar estado)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE persona SET estado = 0 WHERE id_persona = %s", (id_persona,))
+        conn.commit()
+
+        # 3. Registrar Auditoría
+        persona_actualizada = persona_anterior.to_dict()
+        persona_actualizada['estado'] = 0 # El nuevo estado
+        
+        _registrar_auditoria(
+            id_vigilante=id_vigilante_actual,
+            entidad='persona',
+            id_entidad=id_persona,
+            accion='DESACTIVAR', # Usamos 'DESACTIVAR' en lugar de 'ELIMINAR'
+            datos_previos=persona_anterior.to_dict(),
+            datos_nuevos=persona_actualizada
+        )
+        return True
+    except Exception as e:
+        if conn: conn.rollback()
+        print(f"Error en desactivar_persona_controller: {e}")
+        raise Exception(f"Error interno al desactivar persona: {str(e)}")
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()

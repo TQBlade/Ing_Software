@@ -31,12 +31,14 @@ const updateVehiculo = async (id, data) => {
     return response.data;
 };
 
-// (Nota: Asumimos que necesitas una función de eliminar, aunque no estaba en el código de ejemplo)
-// const deleteVehiculo = async (id) => {
-//     await axios.delete(`${API_URL}/vehiculos/${id}`, {
-//         headers: { Authorization: `Bearer ${getToken()}` }
-//     });
-// };
+const deleteVehiculo = async (id) => {
+    const response = await axios.delete(`${API_URL}/vehiculos/${id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    return response.data;
+};
+
+
 
 // --- Formulario Interno ---
 const TIPO_VEHICULO = ['Automovil', 'Motocicleta', 'Bicicleta']; // Asumido
@@ -157,6 +159,22 @@ const VehiculosPage = () => {
       setIsSaving(false);
     }
   };
+
+  const handleDelete = async (vehiculo) => { // 1. Recibe el objeto 'vehiculo'
+    // 2. Extrae el ID del objeto
+    const id_vehiculo = vehiculo.id_vehiculo; 
+
+    if (window.confirm(`¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE el vehículo ${vehiculo.placa}?`)) {
+      try {
+        await deleteVehiculo(id_vehiculo); // 3. Pasa solo el ID
+        alert("Vehículo eliminado exitosamente");
+        fetchVehiculos(); // Recarga la tabla
+      } catch (err) {
+        console.error("Error al eliminar vehículo:", err);
+        alert("Error al eliminar vehículo.");
+      }
+    }
+  };
   
   // --- Definición de Columnas (Ajustado a tu imagen) ---
   const columns = useMemo(() => [
@@ -166,27 +184,7 @@ const VehiculosPage = () => {
     { Header: 'Tipo', accessor: 'tipo' },
     { Header: 'Color', accessor: 'color' },
     { Header: 'Nombre Propietario', accessor: 'propietario.nombre' },
-    {
-      Header: 'Acciones',
-      accessor: 'actions',
-      Cell: ({ row }) => (
-        <div>
-          <button 
-            className="btn btn-primary btn-sm me-2" 
-            onClick={() => handleOpenModal(row.original)}
-          >
-            Editar
-          </button>
-          <button 
-            className="btn btn-danger btn-sm"
-            // onClick={() => handleDelete(row.original.id_vehiculo)} // Descomentar si implementas 'delete'
-          >
-            Eliminar
-          </button>
-        </div>
-      )
-    }
-  ], []); // Dependencias vacías, se recalcula solo una vez
+  ], [fetchVehiculos]); // Dependencias vacías, se recalcula solo una vez
 
   // Filtrado de la tabla (como en tu imagen)
   const filteredVehiculos = vehiculos.filter(v =>
@@ -240,7 +238,7 @@ const VehiculosPage = () => {
               data={filteredVehiculos}
               // Pasamos las funciones de acción a CustomTable (si las usa)
               onEdit={handleOpenModal}
-              // onDelete={handleDelete}
+              onDelete={handleDelete}
             />
           </div>
         </div>

@@ -30,6 +30,13 @@ const updatePersona = async (id, data) => {
     return response.data;
 };
 
+const deletePersona = async (id) => {
+    const response = await axios.delete(`${API_URL}/personas/${id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    return response.data;
+};
+
 // --- Formulario Interno ---
 const TIPO_PERSONA = ['ESTUDIANTE', 'DOCENTE', 'ADMINISTRATIVO', 'VISITANTE'];
 
@@ -149,6 +156,22 @@ const PersonasPage = () => {
       setIsSaving(false);
     }
   };
+
+  const handleDelete = async (persona) => { // 1. Recibe el objeto 'persona'
+    // 2. Extrae el ID del objeto
+    const id_persona = persona.id_persona;
+
+    if (window.confirm(`¿Estás seguro de que deseas desactivar a ${persona.nombre}?`)) {
+      try {
+        await deletePersona(id_persona); // 3. Pasa solo el ID
+        alert("Persona desactivada exitosamente");
+        fetchPersonas(); // Recarga la tabla
+      } catch (err) {
+        console.error("Error al desactivar persona:", err);
+        alert("Error al desactivar persona.");
+      }
+    }
+  };
   
   // --- Columnas ---
   const columns = useMemo(() => [
@@ -160,25 +183,9 @@ const PersonasPage = () => {
       accessor: 'estado',
       Cell: ({ value }) => (value === 1 ? 'Activo' : 'Inactivo')
     },
-    {
-      Header: 'Acciones',
-      accessor: 'actions',
-      Cell: ({ row }) => (
-        <div>
-          <button 
-            className="btn btn-primary btn-sm me-2" 
-            onClick={() => handleOpenModal(row.original)}
-          >
-            Editar
-          </button>
-          <button className="btn btn-danger btn-sm">
-            Eliminar
-          </button>
-        </div>
-      )
-    }
-  ], []);
-
+    
+  ], [fetchPersonas]); 
+  // --- Filtrado de Datos ---
   const filteredPersonas = personas.filter(p =>
     (p.doc_identidad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
      p.nombre?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -224,6 +231,7 @@ const PersonasPage = () => {
               columns={columns}
               data={filteredPersonas}
               onEdit={handleOpenModal}
+              onDelete={handleDelete}
             />
           </div>
         </div>

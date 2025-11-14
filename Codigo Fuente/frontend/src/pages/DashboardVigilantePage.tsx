@@ -123,9 +123,9 @@ const DashboardVigilantePage: React.FC = () => {
         </div>
         <div className={styles.navRight}>
           <Link to="/dashboard_vigilante" className={`${styles.navLink} ${styles.active}`}>🏠 Inicio</Link>
-          <Link to="/historial" className={styles.navLink}>📝 Historial</Link>
+          <Link to="/accesos" className={styles.navLink}>📝 Historial</Link>
           <Link to="/alertas" className={styles.navLink}>🚨 Alertas</Link>
-          <Link to="/gestion" className={styles.navLink}>⚙️ Gestión</Link>
+          <Link to="/vehiculos" className={styles.navLink}>⚙️ Gestión</Link>
           <Link to="/calendario" className={styles.navLink}>📅 Calendario</Link>
           <span className={styles.usuarioLogueado}>👤 <span id="nombreUsuario">{userInfo.nombre || 'Cargando...'}</span></span>
           <button id="btnLogout" className={styles.btnLogout} onClick={handleLogout}>Cerrar sesión</button>
@@ -187,7 +187,7 @@ const DashboardVigilantePage: React.FC = () => {
         <section className={styles.tarjeta}>
           <h2>Gestión de Vehículos</h2>
           <p>Total registrados: <span id="totalVehiculos">{totalVehiculos}</span></p>
-          <Link to="/gestion" className={styles.navLink}><button>Ver Vehículos</button></Link>
+          <Link to="/vehiculos" className={styles.navLink}><button>Ver Vehículos</button></Link>
         </section>
       </main>
     </div>

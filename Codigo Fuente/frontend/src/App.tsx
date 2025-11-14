@@ -4,9 +4,6 @@ import { Route, Routes } from 'react-router-dom';
 // (Corrigiendo las rutas para que sean relativas)
 import Acceso from './pages/Acceso.jsx'; // Tu página (Paquete C)
 import AuditoriaPage from './pages/AuditoriaPage.jsx';
-import DashboardAdmin from './pages/DashboardAdmin.jsx';
-import DashboardVigilante from './pages/DashboardVigilante.jsx';
-import LoginPage from './pages/LoginPage.jsx';
 import PersonasPage from './pages/PersonasPage.jsx';
 import ReportesPage from './pages/ReportesPage.jsx';
 import VehiculosPage from './pages/VehiculosPage.jsx';
@@ -31,7 +28,6 @@ export default function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
 
-<<<<<<< HEAD
         {/* 👇 Esta es la ruta que te interesa 👇 */}
         <Route path="/accesos" element={<Acceso />} />
         <Route path="/auditoria" element={<AuditoriaPage />} />
@@ -41,11 +37,6 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard_vigilante" element={<DashboardVigilantePage />} />
         <Route path="/dashboard_admin" element={<DashboardAdminPage />} />
-=======
-      {/* Rutas de Roles (Protegidas) */}
-      <Route path="/dashboard_admin" element={<DashboardAdmin />} />
-      <Route path="/dashboard_vigilante" element={<DashboardVigilante />} />
->>>>>>> d047f0422694c822ced8d470def9c53c110d2c98
 
       {/* Rutas de Módulos (Tu Paquete C y Paquete B) */}
       
