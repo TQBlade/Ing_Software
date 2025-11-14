@@ -98,14 +98,19 @@ def login():
         if not user:
             return jsonify({"error": "Usuario, clave o rol incorrectos"}), 401
 
-        # Crear token válido por 2 horas
+        # --- CAMBIO CLAVE AQUÍ ---
+        # Ahora el 'user' que recibimos tiene 'id_audit' (que es el 'nu' de tmusuarios)
+        # Lo incluimos en el token.
         token = jwt.encode({
             "usuario": user["usuario"],
             "rol": user["rol"],
+            "id_audit": user["id_audit"], # <-- ESTA ES LA LÍNEA NUEVA
             "exp": datetime.utcnow() + timedelta(hours=2)
         }, app.config["SECRET_KEY"], algorithm="HS256")
+        
+        # ---------------------------
 
-        print(f"✅ Login exitoso: {user['usuario']} ({user['rol']})")
+        print(f"✅ Login exitoso: {user['usuario']} ({user['rol']}) ID: {user['id_audit']}")
 
         return jsonify({
             "status": "ok",

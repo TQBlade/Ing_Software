@@ -5,8 +5,9 @@ def verificar_usuario(usuario, clave, rol):
         conn = get_connection()
         cur = conn.cursor()
 
+        # CAMBIO 1: Añadimos 'nu' (el ID real del usuario) al SELECT
         query = """
-            SELECT nombre, usuario, clave, nivel
+            SELECT nu, nombre, usuario, clave, nivel
             FROM tmusuarios
             WHERE LOWER(usuario) = LOWER(%s)
               AND clave = %s
@@ -24,10 +25,11 @@ def verificar_usuario(usuario, clave, rol):
             print("❌ No se encontró el usuario o clave incorrecta.")
             return None
 
-        nombre, user_db, clave_db, nivel = result
-        print("✅ Usuario encontrado:", nombre, "| Nivel:", nivel)
+        # CAMBIO 2: Actualizamos el desempaquetado (nu es el ID)
+        id_usuario, nombre, user_db, clave_db, nivel = result
+        print("✅ Usuario encontrado:", nombre, "| Nivel:", nivel, "| ID de Login (nu):", id_usuario)
 
-        # Validación correcta:
+        # Validación de rol
         if rol == "Administrador" and nivel != 1:
             print("🚫 Nivel no coincide con Administrador (debería ser 1)")
             return None
@@ -36,7 +38,11 @@ def verificar_usuario(usuario, clave, rol):
             return None
 
         print("✅ Rol validado correctamente:", rol)
+        
+        # CAMBIO 3: Devolvemos el 'id_usuario' (que es 'nu')
+        # Lo llamaremos 'id_audit' para que sea claro
         return {
+            "id_audit": id_usuario, 
             "nombre": nombre,
             "usuario": user_db,
             "nivel": nivel,
