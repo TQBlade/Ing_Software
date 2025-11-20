@@ -10,6 +10,8 @@ import VehiculosPage from './pages/VehiculosPage.jsx';
 import LoginPage from './pages/LoginPage.tsx';
 import DashboardVigilantePage from './pages/DashboardVigilantePage.tsx';
 import DashboardAdminPage from './pages/DashboardAdminPage.tsx';
+import GestionPage from './pages/GestionPage.jsx';
+import AlertasPage from './pages/AlertasPage.jsx';
 
 // (Faltarían Alertas.jsx y Calendario.jsx, pero los puedes agregar después)
 
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard_vigilante" element={<DashboardVigilantePage />} />
         <Route path="/dashboard_admin" element={<DashboardAdminPage />} />
+        <Route path="/gestion" element={<GestionPage />} />
+        <Route path="/alertas" element={<AlertasPage />} />
 
       {/* Rutas de Módulos (Tu Paquete C y Paquete B) */}
       

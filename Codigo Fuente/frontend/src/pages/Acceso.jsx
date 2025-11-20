@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Añade useEffect
+import axios from 'axios'; // Añade axios
 
 // --- ICONOS SVG (¡CÓDIGO REAL AHORA!) ---
 const SearchIcon = () => (
@@ -25,11 +26,27 @@ export default function Accesos() {
   const [dateTo, setDateTo] = useState('');
 
   // Mock Data (Simulación de DB)
-  const historial = [
-    { id: 1, placa: 'XYZ-249', entrada: '06:30 AM', salida: '10:40 AM', fecha: '12/02/2025', estado: 'Permitido' },
-    { id: 2, placa: 'XYZ-356', entrada: '08:40 AM', salida: '02:30 PM', fecha: '24/05/2025', estado: 'Denegado' },
-    { id: 3, placa: 'OPL-587', entrada: '02:40 PM', salida: '06:00 PM', fecha: '30/04/2025', estado: 'Permitido' },
-  ];
+  const [historial, setHistorial] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Cargar datos reales al iniciar
+useEffect(() => {
+  const fetchHistorial = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Llamamos a la ruta que creamos en el paso 2
+      const response = await axios.get('http://127.0.0.1:5000/api/accesos', {
+         headers: { Authorization: `Bearer ${token}` }
+      });
+      setHistorial(response.data);
+    } catch (error) {
+      console.error("Error cargando historial:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchHistorial();
+}, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-
-// Importa tus componentes genéricos
 import CustomTable from '../components/CustomTable.jsx';
 import ModalForm from '../components/ModalForm.jsx';
 
-// --- API Logic (integrada en la página) ---
-const API_URL = 'http://127.0.0.1:5000/api'; // URL Base
+// --- API Logic ---
+const API_URL = 'http://127.0.0.1:5000/api';
 const getToken = () => localStorage.getItem('token');
 
 const getPersonas = async () => {
@@ -37,7 +35,7 @@ const deletePersona = async (id) => {
     return response.data;
 };
 
-// --- Formulario Interno ---
+// --- Formulario ---
 const TIPO_PERSONA = ['ESTUDIANTE', 'DOCENTE', 'ADMINISTRATIVO', 'VISITANTE'];
 
 const PersonaForm = ({ formData, handleChange }) => (
@@ -73,7 +71,7 @@ const PersonaForm = ({ formData, handleChange }) => (
       <label htmlFor="estado" className="form-label">Estado</label>
       <select
         id="estado" name="estado"
-        value={formData.estado === 0 ? 0 : 1} // Asume 1 (Activo) por defecto
+        value={formData.estado === 0 ? 0 : 1}
         onChange={handleChange}
         className="form-select"
       >
@@ -84,7 +82,7 @@ const PersonaForm = ({ formData, handleChange }) => (
   </div>
 );
 
-// --- Componente Principal de la Página ---
+// --- Componente Principal ---
 const PersonasPage = () => {
   const [personas, setPersonas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,6 +92,10 @@ const PersonasPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // --- Estados de Paginación ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const fetchPersonas = useCallback(async () => {
     setIsLoading(true);
@@ -113,7 +115,6 @@ const PersonasPage = () => {
     fetchPersonas();
   }, [fetchPersonas]);
 
-  // --- Manejadores ---
   const handleOpenModal = (persona = null) => {
     setEditingPersona(persona);
     setFormData(persona ? { ...persona, estado: persona.estado ?? 1 } : { estado: 1 });
@@ -151,21 +152,18 @@ const PersonasPage = () => {
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message;
       setError(errorMessage);
-      console.error(err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async (persona) => { // 1. Recibe el objeto 'persona'
-    // 2. Extrae el ID del objeto
+  const handleDelete = async (persona) => {
     const id_persona = persona.id_persona;
-
     if (window.confirm(`¿Estás seguro de que deseas desactivar a ${persona.nombre}?`)) {
       try {
-        await deletePersona(id_persona); // 3. Pasa solo el ID
+        await deletePersona(id_persona);
         alert("Persona desactivada exitosamente");
-        fetchPersonas(); // Recarga la tabla
+        fetchPersonas();
       } catch (err) {
         console.error("Error al desactivar persona:", err);
         alert("Error al desactivar persona.");
@@ -173,7 +171,18 @@ const PersonasPage = () => {
     }
   };
   
-  // --- Columnas ---
+  // --- Filtrado y Paginación ---
+  const filteredPersonas = personas.filter(p =>
+    (p.doc_identidad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     p.nombre?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredPersonas.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPersonas.length / itemsPerPage);
+
+  // Columnas
   const columns = useMemo(() => [
     { Header: 'Documento', accessor: 'doc_identidad' },
     { Header: 'Nombre', accessor: 'nombre' },
@@ -181,47 +190,37 @@ const PersonasPage = () => {
     { 
       Header: 'Estado', 
       accessor: 'estado',
-      Cell: ({ value }) => (value === 1 ? 'Activo' : 'Inactivo')
+      Cell: ({ value }) => (
+        <span className={`badge ${value === 1 ? 'bg-success' : 'bg-secondary'}`}>
+            {value === 1 ? 'Activo' : 'Inactivo'}
+        </span>
+      )
     },
-    
-  ], [fetchPersonas]); 
-  // --- Filtrado de Datos ---
-  const filteredPersonas = personas.filter(p =>
-    (p.doc_identidad?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     p.nombre?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-  
+  ], []);
+
   return (
     <div className="container-fluid p-4">
-    
-      {/* 1. Encabezado */}
       <div className="d-flex justify-content-between align-items-center pb-2 mb-4" 
            style={{ borderBottom: '3px solid #dc3545' }}>
         <h1 className="h2 mb-0" style={{color: '#3a3b45', fontWeight: 700}}>Gestión de Personas</h1>
       </div>
 
-      {/* 2. Barra de Herramientas */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div className="input-group" style={{ maxWidth: '350px' }}>
-          <span className="input-group-text">🔍</span>
+          <span className="input-group-text"><i className="fas fa-search"></i></span>
           <input
             type="text"
             className="form-control"
             placeholder="Buscar por Documento o Nombre..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
-        <button
-          onClick={() => handleOpenModal(null)}
-          className="btn btn-danger"
-          style={{fontWeight: 600}}
-        >
+        <button onClick={() => handleOpenModal(null)} className="btn btn-danger" style={{fontWeight: 600}}>
           Agregar Persona
         </button>
       </div>
 
-      {/* 3. Tabla de Datos */}
       {isLoading ? (
         <div className="text-center p-5">Cargando personas...</div>
       ) : (
@@ -229,15 +228,37 @@ const PersonasPage = () => {
           <div className="card-body p-0">
             <CustomTable
               columns={columns}
-              data={filteredPersonas}
+              data={currentItems} // Usamos los items paginados
               onEdit={handleOpenModal}
               onDelete={handleDelete}
             />
           </div>
+          {/* Controles de Paginación */}
+          <div className="card-footer d-flex justify-content-between align-items-center">
+             <span className="text-muted small">
+                Mostrando {indexOfFirstItem + 1} a {Math.min(indexOfLastItem, filteredPersonas.length)} de {filteredPersonas.length} registros
+             </span>
+             <div>
+                <button 
+                    className="btn btn-outline-secondary btn-sm me-2" 
+                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    Anterior
+                </button>
+                <span className="mx-2">Página {currentPage} de {totalPages || 1}</span>
+                <button 
+                    className="btn btn-outline-secondary btn-sm ms-2"
+                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Siguiente
+                </button>
+             </div>
+          </div>
         </div>
       )}
 
-      {/* 4. Modal de Creación/Edición */}
       <ModalForm
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -246,10 +267,7 @@ const PersonasPage = () => {
         isLoading={isSaving}
         error={error}
       >
-        <PersonaForm 
-            formData={formData} 
-            handleChange={handleChange} 
-        />
+        <PersonaForm formData={formData} handleChange={handleChange} />
       </ModalForm>
     </div>
   );

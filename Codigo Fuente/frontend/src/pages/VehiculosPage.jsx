@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios'; // Asegúrate de tenerlo instalado (npm install axios)
-
-// Importa tus componentes genéricos
+import axios from 'axios';
 import CustomTable from '../components/CustomTable.jsx';
 import ModalForm from '../components/ModalForm.jsx';
 
-// --- API Logic (integrada en la página) ---
-const API_URL = 'http://127.0.0.1:5000/api'; // URL Base
-
+// --- API Logic ---
+const API_URL = 'http://127.0.0.1:5000/api';
 const getToken = () => localStorage.getItem('token');
 
 const getVehiculos = async () => {
@@ -38,10 +35,8 @@ const deleteVehiculo = async (id) => {
     return response.data;
 };
 
-
-
-// --- Formulario Interno ---
-const TIPO_VEHICULO = ['Automovil', 'Motocicleta', 'Bicicleta']; // Asumido
+// --- Formulario ---
+const TIPO_VEHICULO = ['Automovil', 'Motocicleta', 'Bicicleta'];
 
 const VehiculoForm = ({ formData, handleChange }) => (
   <div className="row g-3">
@@ -83,7 +78,7 @@ const VehiculoForm = ({ formData, handleChange }) => (
   </div>
 );
 
-// --- Componente Principal de la Página ---
+// --- Componente Principal ---
 const VehiculosPage = () => {
   const [vehiculos, setVehiculos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,6 +88,10 @@ const VehiculosPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // --- Estados de Paginación ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const fetchVehiculos = useCallback(async () => {
     setIsLoading(true);
@@ -112,7 +111,6 @@ const VehiculosPage = () => {
     fetchVehiculos();
   }, [fetchVehiculos]);
 
-  // --- Manejadores de Modal y Formulario ---
   const handleOpenModal = (vehiculo = null) => {
     setEditingVehiculo(vehiculo);
     setFormData(vehiculo ? { ...vehiculo, id_persona: vehiculo.id_persona } : {});
@@ -147,28 +145,23 @@ const VehiculosPage = () => {
       } else {
         await createVehiculo(dataToSend);
       }
-      
       handleCloseModal();
-      fetchVehiculos(); // Recargar datos
+      fetchVehiculos();
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message;
       setError(errorMessage);
-      console.error(err);
-      // No cerramos el modal si falla, para que el usuario vea el error
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async (vehiculo) => { // 1. Recibe el objeto 'vehiculo'
-    // 2. Extrae el ID del objeto
-    const id_vehiculo = vehiculo.id_vehiculo; 
-
+  const handleDelete = async (vehiculo) => {
+    const id_vehiculo = vehiculo.id_vehiculo;
     if (window.confirm(`¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE el vehículo ${vehiculo.placa}?`)) {
       try {
-        await deleteVehiculo(id_vehiculo); // 3. Pasa solo el ID
+        await deleteVehiculo(id_vehiculo);
         alert("Vehículo eliminado exitosamente");
-        fetchVehiculos(); // Recarga la tabla
+        fetchVehiculos();
       } catch (err) {
         console.error("Error al eliminar vehículo:", err);
         alert("Error al eliminar vehículo.");
@@ -176,58 +169,46 @@ const VehiculosPage = () => {
     }
   };
   
-  // --- Definición de Columnas (Ajustado a tu imagen) ---
-  const columns = useMemo(() => [
-    { Header: 'Placa', accessor: 'placa' },
-    // NOTA: 'Marca' y 'Modelo' no están en la BD (según el informe ).
-    // Si estuvieran, los añadirías aquí.
-    { Header: 'Tipo', accessor: 'tipo' },
-    { Header: 'Color', accessor: 'color' },
-    { Header: 'Nombre Propietario', accessor: 'propietario.nombre' },
-  ], [fetchVehiculos]); // Dependencias vacías, se recalcula solo una vez
-
-  // Filtrado de la tabla (como en tu imagen)
+  // --- Filtrado y Paginación ---
   const filteredVehiculos = vehiculos.filter(v =>
     v.placa.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredVehiculos.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredVehiculos.length / itemsPerPage);
+
+  const columns = useMemo(() => [
+    { Header: 'Placa', accessor: 'placa' },
+    { Header: 'Tipo', accessor: 'tipo' },
+    { Header: 'Color', accessor: 'color' },
+    { Header: 'Nombre Propietario', accessor: 'propietario.nombre' },
+  ], []);
+
   return (
     <div className="container-fluid p-4">
-    
-      {/* 1. Encabezado (como en tu imagen) */}
       <div className="d-flex justify-content-between align-items-center pb-2 mb-4" 
            style={{ borderBottom: '3px solid #dc3545' }}>
         <h1 className="h2 mb-0" style={{color: '#3a3b45', fontWeight: 700}}>Gestión de Vehículos</h1>
       </div>
 
-      {/* 2. Barra de Herramientas (como en tu imagen) */}
       <div className="d-flex justify-content-between align-items-center mb-3">
-        
-        {/* Input de Búsqueda */}
         <div className="input-group" style={{ maxWidth: '350px' }}>
-          <span className="input-group-text" id="basic-addon1">
-            <i className="fas fa-search"></i> {/* Asumiendo FontAwesome */}
-          </span>
+          <span className="input-group-text"><i className="fas fa-search"></i></span>
           <input
             type="text"
             className="form-control"
             placeholder="Buscar por placa..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
-        
-        {/* Botón de Agregar */}
-        <button
-          onClick={() => handleOpenModal(null)}
-          className="btn btn-danger"
-          style={{fontWeight: 600}}
-        >
+        <button onClick={() => handleOpenModal(null)} className="btn btn-danger" style={{fontWeight: 600}}>
           Agregar Vehículo
         </button>
       </div>
 
-      {/* 3. Tabla de Datos */}
       {isLoading ? (
         <div className="text-center p-5">Cargando vehículos...</div>
       ) : (
@@ -235,28 +216,46 @@ const VehiculosPage = () => {
           <div className="card-body p-0">
             <CustomTable
               columns={columns}
-              data={filteredVehiculos}
-              // Pasamos las funciones de acción a CustomTable (si las usa)
+              data={currentItems} // Items paginados
               onEdit={handleOpenModal}
               onDelete={handleDelete}
             />
           </div>
+          {/* Controles de Paginación */}
+          <div className="card-footer d-flex justify-content-between align-items-center">
+             <span className="text-muted small">
+                Mostrando {indexOfFirstItem + 1} a {Math.min(indexOfLastItem, filteredVehiculos.length)} de {filteredVehiculos.length} registros
+             </span>
+             <div>
+                <button 
+                    className="btn btn-outline-secondary btn-sm me-2" 
+                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    Anterior
+                </button>
+                <span className="mx-2">Página {currentPage} de {totalPages || 1}</span>
+                <button 
+                    className="btn btn-outline-secondary btn-sm ms-2"
+                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Siguiente
+                </button>
+             </div>
+          </div>
         </div>
       )}
 
-      {/* 4. Modal de Creación/Edición */}
       <ModalForm
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingVehiculo ? 'Editar Vehículo' : 'Crear Nuevo Vehículo'}
         onSubmit={handleSubmit}
         isLoading={isSaving}
-        error={error} // Pasa el error al modal para que lo muestre
+        error={error}
       >
-        <VehiculoForm 
-            formData={formData} 
-            handleChange={handleChange} 
-        />
+        <VehiculoForm formData={formData} handleChange={handleChange} />
       </ModalForm>
     </div>
   );

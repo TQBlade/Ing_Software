@@ -32,6 +32,12 @@ from backend.core.controller_vehiculos import (
 #  ===========================================================
 # IMPORTAR FUNCIONES DE AUDITORÍA
 from backend.models.auditoria import obtener_historial_auditoria
+# ===========================================================
+#importar controladores de accesos
+from backend.core.controller_accesos import (
+    obtener_historial_accesos, 
+    procesar_validacion_acceso
+)
 
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -129,6 +135,8 @@ def login():
 # ===========================================================
 # RUTAS PROTEGIDAS
 # ===========================================================
+# IMPORTAR CONTROLADORES DE ALERTAS
+from backend.core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller
 # ================================================
 # DASHBOARD VIGILANTE (Rutas API)
 # ================================================
@@ -445,7 +453,54 @@ def get_dashboard_data():
     except Exception as e:
         print("❌ Error cargando datos dashboard:", e)
         return jsonify({"error": "Error al cargar datos"}), 500
+    
+# ===========================================================
+# RUTA PARA HISTORIAL DE ACCESOS
+# 1. Ruta para llenar la Tabla (GET)
+@app.route("/api/accesos", methods=["GET"])
+@token_requerido
+def get_historial_accesos():
+    try:
+        historial = obtener_historial_accesos()
+        return jsonify(historial), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+# 2. Ruta para el Modal de OCR (POST)
+@app.route("/api/accesos/validar", methods=["POST"])
+# @token_requerido  <-- OJO: Tu frontend modal NO está enviando token en el fetch. 
+# Por ahora la dejamos abierta o debes actualizar el fetch en el modal.
+def validar_acceso_ocr():
+    try:
+        # Pasamos el cuerpo crudo como espera tu función
+        # Asumimos ID vigilante 1 por defecto si no hay token
+        respuesta, status = procesar_validacion_acceso(request.data, vigilante_id=1)
+        return jsonify(respuesta), status
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+# ===========================================================
+# RUTA PARA ALERTAS
+
+@app.route("/api/admin/alertas", methods=["GET"])
+@token_requerido
+def get_alertas():
+    try:
+        alertas = obtener_alertas_controller()
+        return jsonify(alertas), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/alertas/<int:id_alerta>", methods=["DELETE"])
+@token_requerido
+def delete_alerta(id_alerta):
+    try:
+        if eliminar_alerta_controller(id_alerta):
+            return jsonify({"mensaje": "Alerta resuelta/eliminada"}), 200
+        else:
+            return jsonify({"error": "No se pudo eliminar"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ===========================================================
 # RUTA PARA ARCHIVOS ESTÁTICOS
 # ===========================================================
