@@ -13,6 +13,10 @@ import LoginPage from './pages/LoginPage.tsx'
 import PersonasPage from './pages/PersonasPage.jsx'
 import ReportesPage from './pages/ReportesPage.jsx'
 import VehiculosPage from './pages/VehiculosPage.jsx'
+import GestionPage from './pages/GestionPage.jsx'
+import GestionVigilante from './pages/GestionVigilante.jsx'
+
+
 
 export default function App() {
   return (
@@ -31,6 +35,7 @@ export default function App() {
         <Route path="vehiculos" element={<VehiculosPage />} />
         <Route path="reportes" element={<ReportesPage />} />
         <Route path="auditoria" element={<AuditoriaPage />} />
+        <Route path="gestion_a" element={<GestionPage />} />
 
         {/* Default admin → /admin/inicio */}
         <Route index element={<Navigate to="inicio" replace />} />
@@ -40,7 +45,9 @@ export default function App() {
       <Route path="/vigilante" element={<VigilanteLayout />}>
         <Route path="inicio" element={<DashboardVigilantePage />} />
         <Route path="historial" element={<AccesoPage />} />
-        <Route path="gestion" element={<VehiculosPage />} />
+        <Route path="gestion" element={<GestionVigilante />} />
+        <Route path="vehiculos" element={<VehiculosPage />} />
+        <Route path="personas" element={<PersonasPage />} />
 
         {/* Default vigilante → /vigilante/inicio */}
         <Route index element={<Navigate to="inicio" replace />} />

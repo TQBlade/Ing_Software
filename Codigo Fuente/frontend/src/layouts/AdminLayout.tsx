@@ -47,7 +47,7 @@ const AdminLayout: React.FC = () => {
             📝 Historial
           </NavLink>
 
-          <NavLink to="/admin/gestion" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+          <NavLink to="/admin/gestion_a" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
             ⚙️ Gestión
           </NavLink>
 

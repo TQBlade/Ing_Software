@@ -46,7 +46,7 @@ const VigilanteLayout: React.FC = () => {
           </NavLink>
 
           <NavLink to="/vigilante/gestion" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
-            ⚙️ Vehículos
+            ⚙️ Gestión
           </NavLink>
 
           <span className={styles.usuarioLogueado}>👤 {userInfo.nombre}</span>

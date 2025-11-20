@@ -1,51 +1,37 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const GestionPage = () => {
+const GestionVigilante = () => {
   
-  // Definición de las tarjetas del menú
+  // Definición de las tarjetas para el VIGILANTE
   const modules = [
     {
       title: "Vehículos",
-      desc: "Administrar la flota de vehículos registrados.",
+      desc: "Consultar y gestionar el ingreso de vehículos.",
       icon: "fas fa-car",
-      link: "/admin/vehiculos",
+      link: "/vigilante/vehiculos", // Ruta actualizada
       color: "primary" // Azul
     },
     {
       title: "Personas",
-      desc: "Gestionar propietarios, estudiantes y docentes.",
+      desc: "Consultar información de propietarios y usuarios.",
       icon: "fas fa-users",
-      link: "/admin/personas",
+      link: "/vigilante/personas", // Ruta actualizada
       color: "info" // Cian
     },
     {
-      title: "Alertas",
-      desc: "Revisar y gestionar incidentes de seguridad.",
-      icon: "fas fa-exclamation-triangle",
-      link: "/admin/alertas", // Crearemos esta ruta en la Fase 4
-      color: "warning" // Amarillo
-    },
-    {
-      title: "Reportes",
-      desc: "Generar informes detallados en PDF y Excel.",
-      icon: "fas fa-file-alt",
-      link: "/admin/reportes",
-      color: "success" // Verde
-    },
-    {
       title: "Calendario",
-      desc: "Programar eventos y restricciones de acceso.",
-      icon: "fas fa-calendar-alt",
-      link: "/admin/calendario", // Crearemos esta ruta en la Fase 4
-      color: "danger" // Rojo
+      desc: "Ver eventos y actividades programadas.",
+      icon: "fas fa-calendar-day",
+      link: "/vigilante/calendario", // Se creará más adelante
+      color: "warning" // Amarillo (Visualización)
     },
     {
-      title: "Vigilantes",
-      desc: "Administrar el personal de seguridad.",
-      icon: "fas fa-user-shield",
-      link: "#", // Pendiente de definir si tendrá vista propia
-      color: "secondary" // Gris
+      title: "Reportar Incidente",
+      desc: "Registrar novedades, fallos o situaciones inusuales.",
+      icon: "fas fa-clipboard-list", // Icono de reporte
+      link: "/vigilante/incidentes", // Se creará más adelante
+      color: "danger" // Rojo (Importante)
     }
   ];
 
@@ -53,14 +39,16 @@ const GestionPage = () => {
     <div className="container-fluid p-4">
       {/* Encabezado */}
       <div className="d-flex justify-content-between align-items-center pb-2 mb-4 border-bottom">
-        <h1 className="h2 text-gray-800">Panel de Gestión</h1>
-        <span className="text-muted">Seleccione un módulo para administrar</span>
+        <h1 className="h2 text-gray-800">Gestión Operativa</h1>
+        <Link to="/vigilante/inicio" className="btn btn-outline-secondary">
+          <i className="fas fa-arrow-left me-2"></i> Volver al Inicio
+        </Link>
       </div>
 
       {/* Rejilla de Tarjetas */}
       <div className="row g-4">
         {modules.map((mod, index) => (
-          <div key={index} className="col-md-6 col-lg-4">
+          <div key={index} className="col-md-6 col-lg-6"> {/* 2 columnas en pantallas grandes para que se vean grandes */}
             <div className="card shadow-sm h-100 border-0 hover-scale">
               <div className="card-body text-center p-5">
                 
@@ -82,7 +70,7 @@ const GestionPage = () => {
         ))}
       </div>
 
-      {/* Estilo extra para efecto hover (opcional) */}
+      {/* Estilo extra para efecto hover */}
       <style jsx="true">{`
         .hover-scale { transition: transform 0.2s ease-in-out; }
         .hover-scale:hover { transform: translateY(-5px); }
@@ -91,4 +79,4 @@ const GestionPage = () => {
   );
 };
 
-export default GestionPage;
+export default GestionVigilante;
