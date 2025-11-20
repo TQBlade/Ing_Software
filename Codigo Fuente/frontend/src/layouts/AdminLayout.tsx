@@ -1,0 +1,67 @@
+import React, { useEffect, useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+
+import styles from './AdminLayout.module.css';
+
+interface IUserInfo {
+  nombre?: string;
+  rol?: string;
+}
+
+const AdminLayout: React.FC = () => {
+  const navigate = useNavigate();
+  const [userInfo, setUserInfo] = useState<IUserInfo>({});
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const storedUserInfo = JSON.parse(localStorage.getItem("user_info") || "{}");
+
+    if (!token || storedUserInfo.rol !== "Administrador") {
+      navigate("/login"); 
+      return;
+    }
+    setUserInfo(storedUserInfo);
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_info");
+    navigate("/login");
+  };
+
+  return (
+    <div className={styles.dashboardContainer}>
+      <nav className={styles.navbar}>
+        <div className={styles.navLeft}>
+          <img src="/img/SmartCar.png" alt="SmartCar Logo" className={styles.logo} />
+        </div>
+        <div className={styles.navRight}>
+          <NavLink to="/admin/inicio" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+            🏠 Inicio
+          </NavLink>
+
+          <NavLink to="/admin/historial" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+            📝 Historial
+          </NavLink>
+
+          <NavLink to="/admin/gestion" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+            ⚙️ Gestión
+          </NavLink>
+
+          <NavLink to="/admin/auditoria" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>
+            🛡️ Auditoría
+          </NavLink>
+
+          <span className={styles.usuarioLogueado}>👤 {userInfo.nombre}</span>
+          <button className={styles.btnLogout} onClick={handleLogout}>Cerrar sesión</button>
+        </div>
+      </nav>
+
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
+export default AdminLayout;
