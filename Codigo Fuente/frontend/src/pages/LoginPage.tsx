@@ -1,37 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Usaremos axios como en las otras páginas
 
-// Importamos los estilos CSS Módulo
+// Estilos del login
 import styles from './LoginPage.module.css';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
 
-    // 1. Estados para manejar el formulario y los mensajes
     const [usuario, setUsuario] = useState('');
     const [clave, setClave] = useState('');
     const [rol, setRol] = useState('');
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState({ message: '', type: '', show: false });
 
-    // 2. Lógica para verificar si ya existe un token (de login.js)
+    // ============================================================
+    // 🔐 VERIFICAR SI YA ESTÁ LOGUEADO
+    // ============================================================
     useEffect(() => {
-        // Renombramos 'jwt_token' a 'token' para ser consistentes
-        const token = localStorage.getItem('token'); 
+        const token = localStorage.getItem('token');
         const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
 
         if (token && userInfo.rol) {
-            // Si ya está logueado, lo redirigimos
             if (userInfo.rol === 'Administrador') {
-                navigate('/dashboard_admin'); // Iremos al dashboard de admin en React
+                navigate('/admin/inicio');
             } else if (userInfo.rol === 'Vigilante') {
-                navigate('/dashboard_vigilante'); // Iremos al dashboard de vigilante en React
+                navigate('/vigilante/inicio');
             }
         }
     }, [navigate]);
 
-    // 3. Lógica del 'submit' del formulario (de login.js)
+    // ============================================================
+    // 🔐 LOGIN SUBMIT
+    // ============================================================
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -44,45 +45,40 @@ const LoginPage: React.FC = () => {
         }
 
         try {
-            // Llamamos a la API del backend (Flask)
             const response = await axios.post('http://127.0.0.1:5000/login', {
                 usuario,
                 clave,
                 rol
             });
 
-            // Éxito: (de login.js)
             setAlert({ message: '✅ Inicio de sesión exitoso', type: 'success', show: true });
             setLoading(false);
 
-            // Guardamos el token y la info del usuario
-            // Usamos 'token' para consistencia con las otras páginas
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user_info', JSON.stringify(response.data.user));
 
-            // Redirigimos (usando React Router)
             setTimeout(() => {
                 if (rol === 'Administrador') {
-                    navigate('/dashboard_admin');
+                    navigate('/admin/inicio');
                 } else {
-                    navigate('/dashboard_vigilante');
+                    navigate('/vigilante/inicio');
                 }
-            }, 1000);
+            }, 500);
 
         } catch (err: any) {
-            // Error: (de login.js)
-            const errorMessage = err.response?.data?.error || 'Error de conexión con el servidor.';
+            const errorMessage =
+                err.response?.data?.error || 'Error de conexión con el servidor.';
             setAlert({ message: `❌ ${errorMessage}`, type: 'error', show: true });
             setLoading(false);
         }
     };
 
-    // 4. Estructura JSX (basada en login.html)
+    // ============================================================
+    // 🎨 UI DEL LOGIN
+    // ============================================================
     return (
-        // Usamos los estilos importados
         <div className={styles.loginContainer}>
             <div className={styles.logo}>
-                {/* Ruta actualizada para la carpeta /public */}
                 <img src="/img/logo.png" alt="SmartCar Logo" />
             </div>
 
@@ -126,6 +122,7 @@ const LoginPage: React.FC = () => {
                             onChange={(e) => setRol(e.target.value)}
                         /> Administrador
                     </label>
+
                     <label>
                         <input
                             type="radio"
@@ -141,12 +138,11 @@ const LoginPage: React.FC = () => {
                     {loading ? 'Iniciando...' : 'Iniciar Sesión'}
                 </button>
 
-                {/* Alerta de React (reemplaza <div id="alert">) */}
-                <div 
-                    className={`${styles.alert} ${styles[alert.type]} ${alert.show ? styles.show : ''}`}
-                >
-                    {alert.message}
-                </div>
+                {alert.show && (
+                    <div className={`${styles.alert} ${styles[alert.type]}`}>
+                        {alert.message}
+                    </div>
+                )}
             </form>
         </div>
     );

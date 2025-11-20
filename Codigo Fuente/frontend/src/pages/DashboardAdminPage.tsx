@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-// Reutilizamos los mismos estilos del dashboard que ya migramos
-import styles from './DashboardVigilantePage.module.css'; 
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+// Importamos los estilos del módulo para las clases como 'tarjeta'
+import styles from '../pages/DashboardVigilantePage.module.css';
 
-// Definimos la URL de la API
+// Definimos la URL de la API (como en las otras páginas)
 const API_URL = 'http://127.0.0.1:5000/api';
 
 // --- Definición de tipos para los datos ---
@@ -13,7 +13,6 @@ interface IResumen {
   total_accesos: number;
   total_alertas: number;
 }
-
 interface IAcceso {
   placa: string;
   tipo: string;
@@ -22,66 +21,38 @@ interface IAcceso {
   resultado: string;
 }
 
-interface IUserInfo {
-  nombre?: string;
-  rol?: string;
-}
-
 const DashboardAdminPage: React.FC = () => {
-  const navigate = useNavigate();
-
   // --- Estados para los datos del dashboard ---
-  const [userInfo, setUserInfo] = useState<IUserInfo>({});
   const [resumen, setResumen] = useState<IResumen>({ total_vehiculos: 0, total_accesos: 0, total_alertas: 0 });
   const [accesos, setAccesos] = useState<IAcceso[]>([]);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
-  // --- Estados para el formulario de registro ---
+  // --- Estados para el formulario de registro de vigilante ---
   const [nombreVigilante, setNombreVigilante] = useState('');
   const [docVigilante, setDocVigilante] = useState('');
   const [telefonoVigilante, setTelefonoVigilante] = useState('');
-  const [rolVigilante, setRolVigilante] = useState('1'); // Valor por defecto
+  const [rolVigilante, setRolVigilante] = useState('1'); 
+  const [errorVigilante, setErrorVigilante] = useState<string | null>(null);
 
-  // --- Lógica de Autenticación y Cierre de Sesión ---
-  // (Lógica adaptada de dashboard_admin.js)
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedUserInfo = JSON.parse(localStorage.getItem("user_info") || "{}");
+  const getToken = () => localStorage.getItem("token");
 
-    if (!token || storedUserInfo.rol !== "Administrador") {
-      navigate("/login"); // Si no hay token o no es Admin, fuera
-      return;
-    }
-    setUserInfo(storedUserInfo);
-  }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_info");
-    navigate("/login");
-  };
-
-  // --- Lógica de Carga de Datos del Dashboard ---
-  // (Adaptado de dashboard_admin.js)
+  // --- Lógica de Carga de Datos del Dashboard (Usando Axios) ---
   const cargarDatosDashboard = useCallback(async () => {
+    setLoadingDashboard(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      // 1. Cargar Resumen
-      // (El JS original no usaba token, pero es buena práctica)
       const resResumen = await axios.get(`${API_URL}/admin/resumen`, config);
       setResumen(resResumen.data);
 
-      // 2. Cargar Accesos
       const resAccesos = await axios.get(`${API_URL}/admin/accesos`, config);
       setAccesos(resAccesos.data);
 
     } catch (err) {
-      console.error("Error al cargar datos del dashboard:", err);
-      // Si el error es de token, lo mandamos al login
-      if ((err as any).response?.status === 401) {
-        handleLogout();
-      }
+      console.error("❌ Error al cargar datos del dashboard:", err);
+    } finally {
+        setLoadingDashboard(false);
     }
   }, []);
 
@@ -89,20 +60,8 @@ const DashboardAdminPage: React.FC = () => {
     cargarDatosDashboard();
   }, [cargarDatosDashboard]);
 
-  // --- Lógica de Acciones del Admin ---
-  // (Adaptado de dashboard_admin.js)
 
-  // Exportar PDF / Excel
-  const handleExport = (tipo: 'pdf' | 'excel') => {
-    // El JS original usa window.open, pero eso no enviará el token.
-    // Usaremos el mismo método 'descargarReporte' que hicimos para ReportesPage.
-    // Como esta lógica ya está en ReportesPage, aquí solo navegamos.
-    // Si quisiéramos botones aquí, tendríamos que duplicar la lógica de descarga.
-    // Por ahora, lo más limpio es navegar a la página de reportes.
-    navigate('/reportes');
-  };
-
-  // Registrar Vigilante
+  // --- Lógica de Registro de Vigilante ---
   const handleRegistrarVigilante = async () => {
     const data = {
       nombre: nombreVigilante,
@@ -112,82 +71,106 @@ const DashboardAdminPage: React.FC = () => {
     };
     
     if (!data.nombre || !data.doc_identidad) {
-      alert("Nombre y Documento son obligatorios.");
+      setErrorVigilante("Nombre y Documento son obligatorios.");
       return;
     }
+    setErrorVigilante(null);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       await axios.post(`${API_URL}/admin/registrar_vigilante`, data, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert("✅ Vigilante registrado correctamente");
-      // Limpiar formulario
       setNombreVigilante('');
       setDocVigilante('');
       setTelefonoVigilante('');
     } catch (err) {
+      const errorMessage = (err as any).response?.data?.error || "Error al registrar vigilante";
+      setErrorVigilante("❌ " + errorMessage);
       console.error(err);
-      alert("❌ Error al registrar vigilante");
     }
   };
 
 
-  // --- JSX (Basado en dashboard_admin.html y la imagen) ---
+  // --- JSX (SOLO CONTENIDO, SIN BARRA DE NAVEGACIÓN) ---
+  if (loadingDashboard) {
+      return <div className={styles.mainContent}><p>Cargando datos del administrador...</p></div>;
+  }
+
   return (
-    <div className={styles.dashboardContainer}>
-      {/* Barra de navegación */}
-      <nav className={styles.navbar}>
-        <div className={styles.navLeft}>
-          <img src="/img/SmartCar.png" alt="SmartCar Logo" className={styles.logo} />
-        </div>
-        <div className={styles.navRight}>
-          {/* --- LINKS ACTUALIZADOS --- */}
-          <Link to="/dashboard_admin" className={`${styles.navLink} ${styles.active}`}>🏠 Inicio</Link>
-          <Link to="/personas" className={styles.navLink}>👥 Personas</Link>
-          <Link to="/vehiculos" className={styles.navLink}>🚗 Vehículos</Link>
-          <Link to="/reportes" className={styles.navLink}>📄 Reportes</Link>
-          <Link to="/auditoria" className={styles.navLink}>🛡️ Auditoría</Link>
+    <div className={styles.mainContent}> 
+        
+        {/* === FILA SUPERIOR: RESUMEN Y REGISTRO (Dos Columnas) === */}
+
+        {/* 1. Resumen General */}
+        <section className={`${styles.tarjeta} col-span-1 p-4`}>
+          <h2 className="text-xl font-bold mb-3 text-gray-700">Resumen General</h2>
+          <p className="text-lg mb-1">Total Vehículos: <span className="font-bold">{resumen.total_vehiculos}</span></p>
+          <p className="text-lg mb-1">Total Accesos: <span className="font-bold">{resumen.total_accesos}</span></p>
+          <p className="text-lg mb-1">Total Alertas: <span className="font-bold">{resumen.total_alertas}</span></p>
+        </section>
+
+        {/* 2. Registrar Vigilante */}
+        <section className={`${styles.tarjeta} col-span-1 p-4`}>
+          <h2 className="text-xl font-bold mb-4 text-gray-700">Registrar Vigilante</h2>
           
-          <span className={styles.usuarioLogueado}>👤 {userInfo.nombre || 'Administrador'}</span>
-          <button id="btnLogout" className={styles.btnLogout} onClick={handleLogout}>Cerrar sesión</button>
-        </div>
-      </nav>
-
-      {/* Contenido principal */}
-      <main className={styles.mainContent}>
-        {/* Resumen General */}
-        <section className={styles.tarjeta}>
-          <h2>Resumen General</h2>
-          <p>Total Vehículos: <span id="totalVehiculos">{resumen.total_vehiculos}</span></p>
-          <p>Total Accesos: <span id_de_acceso="totalAccesos">{resumen.total_accesos}</span></p>
-          <p>Total Alertas: <span id="totalAlertas">{resumen.total_alertas}</span></p>
+          <div className="mb-2">
+            <input 
+              placeholder="Nombre completo" 
+              value={nombreVigilante} 
+              onChange={e => setNombreVigilante(e.target.value)} 
+              className="form-control"
+            />
+          </div>
+          <div className="mb-2">
+            <input 
+              placeholder="Documento" 
+              value={docVigilante} 
+              onChange={e => setDocVigilante(e.target.value)} 
+              className="form-control"
+            />
+          </div>
+          <div className="mb-3">
+            <input 
+              placeholder="Teléfono" 
+              value={telefonoVigilante} 
+              onChange={e => setTelefonoVigilante(e.target.value)} 
+              className="form-control"
+            />
+          </div>
+          
+          <div className="d-flex align-items-center justify-content-between">
+            <select 
+              value={rolVigilante} 
+              onChange={e => setRolVigilante(e.target.value)} 
+              className="form-select me-3"
+              style={{ width: '150px' }}
+            >
+              <option value="1">Principal</option>
+              <option value="0">Vigilante</option>
+            </select>
+            <button 
+              onClick={handleRegistrarVigilante} 
+              className="btn btn-danger" 
+              style={{ background: '#c00' }} /* Usar color de botón */
+            >
+              Registrar
+            </button>
+          </div>
+          
+          {errorVigilante && <div className="alert alert-danger mt-3">{errorVigilante}</div>}
         </section>
 
-        {/* Registrar Vigilante */}
-        <section className={styles.tarjeta}>
-          <h2>Registrar Vigilante</h2>
-          <input id="nombre" placeholder="Nombre completo" value={nombreVigilante} onChange={e => setNombreVigilante(e.target.value)} />
-          <input id="doc" placeholder="Documento" value={docVigilante} onChange={e => setDocVigilante(e.target.value)} />
-          <input id="telefono" placeholder="Teléfono" value={telefonoVigilante} onChange={e => setTelefonoVigilante(e.target.value)} />
-          <select id="rol" value={rolVigilante} onChange={e => setRolVigilante(e.target.value)}>
-            <option value="1">Principal</option>
-            <option value="2">Nocturno</option>
-          </select>
-          <button id="btnRegistrar" onClick={handleRegistrarVigilante}>Registrar</button>
-        </section>
+        {/* === FILA INFERIOR: HISTORIAL DE ACCESOS === */}
 
-        {/* Historial de Accesos */}
-        <section className={`${styles.tarjeta} ${styles.tarjetaLarga}`}> {/* Podrías necesitar una clase extra para que ocupe más ancho */}
-          <h2>Historial de Accesos</h2>
-          {/*
-            Los botones de exportar ahora van a la página de Reportes, 
-            por lo que los quitamos de aquí para evitar confusión.
-            La página /reportes ya tiene esta funcionalidad.
-          */}
-          <table id="tablaAccesos">
-            <thead>
-              <tr>
+        {/* 3. Historial de Accesos (Ocupa dos columnas) */}
+        <section className={`${styles.tarjeta} col-span-2 p-4`}>
+          <h2 className="text-xl font-bold mb-4 text-gray-700">Historial de Accesos Recientes</h2>
+          <div className="overflow-x-auto">
+          <table id="tablaAccesos" className="table table-striped table-sm">
+            <thead className="table-light">
+              <tr style={{ fontWeight: 'bold' }}> {/* Aplicar bold al header */}
                 <th>Placa</th>
                 <th>Tipo</th>
                 <th>Color</th>
@@ -197,9 +180,9 @@ const DashboardAdminPage: React.FC = () => {
             </thead>
             <tbody>
               {accesos.length === 0 ? (
-                <tr><td colSpan={5}>No hay accesos</td></tr>
+                <tr><td colSpan={5} className="text-center">No hay accesos recientes</td></tr>
               ) : (
-                accesos.map((a, index) => (
+                accesos.slice(0, 5).map((a, index) => (
                   <tr key={index}>
                     <td>{a.placa}</td>
                     <td>{a.tipo}</td>
@@ -211,8 +194,9 @@ const DashboardAdminPage: React.FC = () => {
               )}
             </tbody>
           </table>
+          </div>
+          <Link to="/admin/historial" className="btn btn-link float-end">Ver Historial Completo</Link>
         </section>
-      </main>
     </div>
   );
 };

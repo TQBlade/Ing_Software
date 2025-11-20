@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import styles from './DashboardVigilantePage.module.css'; // Importamos los estilos
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+// Importamos los estilos del módulo (usaremos las clases como 'tarjeta')
+import styles from '../pages/DashboardVigilantePage.module.css';
 
 // Definimos la URL de la API (como en las otras páginas)
 const API_URL = 'http://127.0.0.1:5000/api';
@@ -14,68 +15,46 @@ interface IAcceso {
   vigilante: string;
 }
 
-interface IUserInfo {
-  nombre?: string;
-  rol?: string;
-}
+// Nota: No necesitamos el hook useAuth ni Navbar aquí porque el Layout se encarga.
 
 const DashboardVigilantePage: React.FC = () => {
   const navigate = useNavigate();
 
   // --- Estados de React para manejar los datos ---
-  const [userInfo, setUserInfo] = useState<IUserInfo>({});
   const [ultimosAccesos, setUltimosAccesos] = useState<IAcceso[]>([]);
   const [totalVehiculos, setTotalVehiculos] = useState(0);
-  const [alertasActivas, setAlertasActivas] = useState(0);
+  const [alertasActivas, setAlertasActivas] = useState("0 alertas");
   const [placaInput, setPlacaInput] = useState('');
   
-  // --- Lógica de Autenticación y Cierre de Sesión ---
-  // (Lógica adaptada de dashboard_vigilante.js)
+  const getToken = () => localStorage.getItem("token");
 
-  useEffect(() => {
-    // CAMBIO: Usamos 'token' para ser consistentes con LoginPage.tsx
-    const token = localStorage.getItem("token"); 
-    const storedUserInfo = JSON.parse(localStorage.getItem("user_info") || "{}");
 
-    if (!token) {
-      navigate("/login"); // Si no hay token, regresamos al login de React
-      return;
-    }
-    setUserInfo(storedUserInfo);
-  }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user_info");
-    navigate("/login");
-  };
-
-  // --- Lógica de Carga de Datos ---
-  // (Funciones adaptadas de dashboard_vigilante.js)
-
-  const cargarUltimosAccesos = useCallback(async () => {
+  // --- Lógica de Carga de Datos (Usando Axios) ---
+  const cargarUltimosAccesos = useCallback(async (token: string) => {
     try {
-      // Usamos axios con la URL completa
-      const res = await axios.get(`${API_URL}/ultimos_accesos`);
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API_URL}/ultimos_accesos`, config);
       setUltimosAccesos(res.data);
     } catch (err) {
       console.error("❌ Error al cargar accesos:", err);
     }
   }, []);
 
-  const cargarTotalVehiculos = useCallback(async () => {
+  const cargarTotalVehiculos = useCallback(async (token: string) => {
     try {
-      const res = await axios.get(`${API_URL}/total_vehiculos`);
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API_URL}/total_vehiculos`, config);
       setTotalVehiculos(res.data.total);
     } catch (err) {
       console.error("❌ Error al cargar total de vehículos:", err);
     }
   }, []);
 
-  const cargarAlertasActivas = useCallback(async () => {
+  const cargarAlertasActivas = useCallback(async (token: string) => {
     try {
-      const res = await axios.get(`${API_URL}/alertas_activas`);
-      setAlertasActivas(res.data.total);
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API_URL}/alertas_activas`, config);
+      setAlertasActivas(`${res.data.total} alertas activas`);
     } catch (err) {
       console.error("❌ Error al cargar alertas activas:", err);
     }
@@ -83,24 +62,25 @@ const DashboardVigilantePage: React.FC = () => {
 
   // Efecto para cargar todos los datos cuando el componente se monta
   useEffect(() => {
-    cargarUltimosAccesos();
-    cargarTotalVehiculos();
-    cargarAlertasActivas();
+    const token = getToken();
+    if (token) {
+        cargarUltimosAccesos(token);
+        cargarTotalVehiculos(token);
+        cargarAlertasActivas(token);
+    }
   }, [cargarUltimosAccesos, cargarTotalVehiculos, cargarAlertasActivas]);
 
+
   // --- Lógica de Búsqueda de Placa ---
-  // (Lógica adaptada de dashboard_vigilante.js)
-  
   const handleBuscarPlaca = async () => {
     if (!placaInput) {
       alert("Por favor ingresa una placa.");
       return;
     }
     try {
-      // Nota: El JS original usaba fetch('/api/...')
-      // pero las APIs en server.py suelen tener /api/. 
-      // Ajusta si tu ruta es diferente.
-      const res = await axios.get(`${API_URL}/buscar_placa/${placaInput}`);
+      const token = getToken();
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const res = await axios.get(`${API_URL}/buscar_placa/${placaInput}`, config);
       const data = res.data;
       
       alert(
@@ -113,27 +93,10 @@ const DashboardVigilantePage: React.FC = () => {
   };
 
 
-  // --- JSX (Basado en dashboard_vigilante.html) ---
+  // --- JSX (SOLO CONTENIDO, SIN BARRA DE NAVEGACIÓN) ---
   return (
-    <div className={styles.dashboardContainer}>
-      {/* Barra de navegación */}
-      <nav className={styles.navbar}>
-        <div className={styles.navLeft}>
-          <img src="/img/SmartCar.png" alt="SmartCar Logo" className={styles.logo} />
-        </div>
-        <div className={styles.navRight}>
-          <Link to="/dashboard_vigilante" className={`${styles.navLink} ${styles.active}`}>🏠 Inicio</Link>
-          <Link to="/accesos" className={styles.navLink}>📝 Historial</Link>
-          <Link to="/alertas" className={styles.navLink}>🚨 Alertas</Link>
-          <Link to="/vehiculos" className={styles.navLink}>⚙️ Gestión</Link>
-          <Link to="/calendario" className={styles.navLink}>📅 Calendario</Link>
-          <span className={styles.usuarioLogueado}>👤 <span id="nombreUsuario">{userInfo.nombre || 'Cargando...'}</span></span>
-          <button id="btnLogout" className={styles.btnLogout} onClick={handleLogout}>Cerrar sesión</button>
-        </div>
-      </nav>
-
-      {/* Contenido principal */}
-      <main className={styles.mainContent}>
+    // Reutilizamos el mainContent del CSS que está diseñado para la rejilla
+    <main className={styles.mainContent}> 
         {/* Validar acceso */}
         <section className={`${styles.tarjeta} ${styles.rojo}`}>
           <h2>Validar acceso vehicular</h2>
@@ -179,18 +142,17 @@ const DashboardVigilantePage: React.FC = () => {
         {/* Alertas */}
         <section className={`${styles.tarjeta} ${styles.alerta}`}>
           <h2>Alertas Activas</h2>
-          <p id="alertasActivas">{alertasActivas} alertas activas</p>
-          <Link to="/alertas" className={styles.navLink}><button>Gestionar alertas</button></Link>
+          <p id="alertasActivas">{alertasActivas}</p>
+          <Link to="#" className={styles.navLink}><button disabled>Gestionar alertas</button></Link>
         </section>
 
         {/* Gestión */}
         <section className={styles.tarjeta}>
           <h2>Gestión de Vehículos</h2>
           <p>Total registrados: <span id="totalVehiculos">{totalVehiculos}</span></p>
-          <Link to="/vehiculos" className={styles.navLink}><button>Ver Vehículos</button></Link>
+          <Link to="/vigilante/gestion" className={styles.navLink}><button>Ver Vehículos</button></Link>
         </section>
       </main>
-    </div>
   );
 };
 

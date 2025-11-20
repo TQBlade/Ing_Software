@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
-import styles from './AdminLayout.module.css';
+// --- CAMBIO CLAVE AQUÍ ---
+// Importamos los estilos avanzados del Dashboard Vigilante
+import styles from '../pages/DashboardVigilantePage.module.css';
 
 interface IUserInfo {
   nombre?: string;
@@ -31,6 +33,7 @@ const AdminLayout: React.FC = () => {
 
   return (
     <div className={styles.dashboardContainer}>
+      {/* Usamos las clases del CSS del Vigilante para la Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navLeft}>
           <img src="/img/SmartCar.png" alt="SmartCar Logo" className={styles.logo} />
@@ -57,7 +60,8 @@ const AdminLayout: React.FC = () => {
         </div>
       </nav>
 
-      <main>
+      {/* AÑADIMOS mainContent AQUÍ para el fondo y la rejilla */}
+      <main className={styles.mainContent}> 
         <Outlet />
       </main>
     </div>
