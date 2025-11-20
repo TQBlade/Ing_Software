@@ -16,8 +16,6 @@ import VehiculosPage from './pages/VehiculosPage.jsx'
 import GestionPage from './pages/GestionPage.jsx'
 import GestionVigilante from './pages/GestionVigilante.jsx'
 import AlertasPage from './pages/AlertasPage.jsx'
-import CalendarAdminPage from './pages/CalendarioAdmin.jsx';
-import CalendarVigilantePage from './pages/CalendarioVigilante.jsx';
 import CalendarioAdmin from './pages/CalendarioAdmin.jsx'
 import CalendarioVigilante from './pages/CalendarioVigilante.jsx'
 
