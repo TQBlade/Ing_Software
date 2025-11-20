@@ -15,7 +15,11 @@ import ReportesPage from './pages/ReportesPage.jsx'
 import VehiculosPage from './pages/VehiculosPage.jsx'
 import GestionPage from './pages/GestionPage.jsx'
 import GestionVigilante from './pages/GestionVigilante.jsx'
-
+import AlertasPage from './pages/AlertasPage.jsx'
+import CalendarAdminPage from './pages/CalendarioAdmin.jsx';
+import CalendarVigilantePage from './pages/CalendarioVigilante.jsx';
+import CalendarioAdmin from './pages/CalendarioAdmin.jsx'
+import CalendarioVigilante from './pages/CalendarioVigilante.jsx'
 
 
 export default function App() {
@@ -36,6 +40,8 @@ export default function App() {
         <Route path="reportes" element={<ReportesPage />} />
         <Route path="auditoria" element={<AuditoriaPage />} />
         <Route path="gestion_a" element={<GestionPage />} />
+        <Route path="alertas" element={<AlertasPage />} />  
+        <Route path="calendario" element={<CalendarioAdmin />} />
 
         {/* Default admin → /admin/inicio */}
         <Route index element={<Navigate to="inicio" replace />} />
@@ -48,6 +54,7 @@ export default function App() {
         <Route path="gestion" element={<GestionVigilante />} />
         <Route path="vehiculos" element={<VehiculosPage />} />
         <Route path="personas" element={<PersonasPage />} />
+        <Route path="calendario" element={<CalendarioVigilante />} />
 
         {/* Default vigilante → /vigilante/inicio */}
         <Route index element={<Navigate to="inicio" replace />} />

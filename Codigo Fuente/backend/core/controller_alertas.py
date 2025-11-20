@@ -1,10 +1,10 @@
 from core.db.connection import get_connection
 from psycopg2.extras import RealDictCursor
-from datetime import datetime
 
 def obtener_alertas_controller():
     """
-    Obtiene todas las alertas registradas, uniendo con vigilante para saber quién estaba de turno.
+    Obtiene todas las alertas activas, ordenadas por las más recientes.
+    Une información con la tabla de accesos para obtener la fecha exacta.
     """
     conn = None
     try:
@@ -17,14 +17,15 @@ def obtener_alertas_controller():
                 al.tipo,
                 al.detalle,
                 al.severidad,
-                al.id_acceso,
-                v.nombre as nombre_vigilante,
-                -- Si tienes fecha en la alerta úsala, si no, usamos la del acceso o simulamos 'Ahora'
-                -- Basado en tu SQL, alerta no tiene fecha propia, así que tomamos la del acceso asociado
-                acc.fecha_hora as fecha_hora
+                -- Obtenemos la fecha del acceso asociado, si existe
+                TO_CHAR(acc.fecha_hora, 'YYYY-MM-DD HH12:MI AM') as fecha_hora,
+                -- Intentamos obtener el nombre del vigilante (si la FK apunta a vigilante)
+                -- Si tu tabla alerta usa id_usuario (como auditoria), ajustaremos esto despues.
+                -- Por ahora usamos la estructura original de bd_carros.sql
+                v.nombre as nombre_vigilante
             FROM alerta al
-            LEFT JOIN vigilante v ON al.id_vigilante = v.id_vigilante
             LEFT JOIN acceso acc ON al.id_acceso = acc.id_acceso
+            LEFT JOIN vigilante v ON al.id_vigilante = v.id_vigilante
             ORDER BY acc.fecha_hora DESC;
         """
         cursor.execute(query)
@@ -35,18 +36,9 @@ def obtener_alertas_controller():
     finally:
         if conn: conn.close()
 
-def crear_alerta_manual_controller(data, usuario_actual):
-    """
-    Permite crear una alerta manual (sin un acceso específico asociado obligatoriamente).
-    Nota: Tu BD exige 'id_acceso' NOT NULL. 
-    Para alertas manuales, tendríamos que asociarla a un acceso dummy o modificar la BD.
-    *Por ahora, asumiremos que es solo para listar las automáticas.*
-    """
-    pass 
-
 def eliminar_alerta_controller(id_alerta):
     """
-    Elimina una alerta (para 'resolverla').
+    Elimina una alerta de la base de datos (Acción 'Resolver').
     """
     conn = None
     try:

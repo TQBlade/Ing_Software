@@ -38,6 +38,15 @@ from backend.core.controller_accesos import (
     obtener_historial_accesos, 
     procesar_validacion_acceso
 )
+# ===========================================================
+#importar controladores de calendario
+from backend.core.controller_calendario import (
+    obtener_eventos_controller,
+    crear_evento_controller,
+    actualizar_evento_controller,
+    eliminar_evento_controller,
+    verificar_evento_controller
+)
 
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -499,6 +508,69 @@ def delete_alerta(id_alerta):
             return jsonify({"mensaje": "Alerta resuelta/eliminada"}), 200
         else:
             return jsonify({"error": "No se pudo eliminar"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+# ===========================================================
+# RUTAS PARA CALENDARIO DE EVENTOS
+@app.route("/api/eventos", methods=["GET"])
+@token_requerido
+def get_eventos():
+    """Obtener todos los eventos (Admin y Vigilante)"""
+    try:
+        eventos = obtener_eventos_controller()
+        return jsonify(eventos), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos", methods=["POST"])
+@token_requerido
+def create_evento():
+    """Crear evento (Solo Admin)"""
+    if request.usuario_actual.get('rol') != 'Administrador':
+        return jsonify({"error": "No autorizado"}), 403
+    try:
+        data = request.get_json()
+        id_nuevo = crear_evento_controller(data, request.usuario_actual)
+        return jsonify({"mensaje": "Evento creado", "id": id_nuevo}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos/<int:id_evento>", methods=["PUT"])
+@token_requerido
+def update_evento(id_evento):
+    """Actualizar evento (Solo Admin)"""
+    if request.usuario_actual.get('rol') != 'Administrador':
+        return jsonify({"error": "No autorizado"}), 403
+    try:
+        data = request.get_json()
+        actualizar_evento_controller(id_evento, data)
+        return jsonify({"mensaje": "Evento actualizado"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos/<int:id_evento>", methods=["DELETE"])
+@token_requerido
+def delete_evento(id_evento):
+    """Eliminar evento (Solo Admin)"""
+    if request.usuario_actual.get('rol') != 'Administrador':
+        return jsonify({"error": "No autorizado"}), 403
+    try:
+        eliminar_evento_controller(id_evento)
+        return jsonify({"mensaje": "Evento eliminado"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos/<int:id_evento>/verificar", methods=["PUT"])
+@token_requerido
+def verify_evento(id_evento):
+    """Verificar evento (Vigilante y Admin)"""
+    # Aquí permitimos a ambos roles confirmar la realización del evento
+    try:
+        data = request.get_json()
+        verificado = data.get('verificado', True)
+        verificar_evento_controller(id_evento, verificado)
+        return jsonify({"mensaje": "Estado de verificación actualizado"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 # ===========================================================
