@@ -47,7 +47,11 @@ from backend.core.controller_calendario import (
     eliminar_evento_controller,
     verificar_evento_controller
 )
+# ===========================================================
+# importar controladores de incidencias
+from backend.core.controller_incidencias import obtener_vehiculos_en_patio, crear_incidente_manual
 
+# ===========================================================
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR, "frontend", "templates")
@@ -571,6 +575,32 @@ def verify_evento(id_evento):
         verificado = data.get('verificado', True)
         verificar_evento_controller(id_evento, verificado)
         return jsonify({"mensaje": "Estado de verificación actualizado"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ===========================================================
+#ruta para obtener vehículos en patio
+@app.route("/api/vigilante/vehiculos-en-patio", methods=["GET"])
+@token_requerido
+def get_vehiculos_patio():
+    try:
+        vehiculos = obtener_vehiculos_en_patio()
+        return jsonify(vehiculos), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/vigilante/reportar", methods=["POST"])
+@token_requerido
+def post_reportar_incidente():
+    try:
+        data = request.get_json()
+        # Usamos el id_audit del token como id_vigilante
+        id_vigilante = request.usuario_actual['id_audit']
+        
+        if crear_incidente_manual(data, id_vigilante):
+            return jsonify({"mensaje": "Incidente reportado correctamente"}), 201
+        else:
+            return jsonify({"error": "No se pudo crear el reporte"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 # ===========================================================

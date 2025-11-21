@@ -30,7 +30,7 @@ const GestionVigilante = () => {
       title: "Reportar Incidente",
       desc: "Registrar novedades, fallos o situaciones inusuales.",
       icon: "fas fa-clipboard-list", // Icono de reporte
-      link: "/vigilante/incidentes", // Se creará más adelante
+      link: "/vigilante/vehiculos_dentro", // Se creó la página VehiculosDentro
       color: "danger" // Rojo (Importante)
     }
   ];

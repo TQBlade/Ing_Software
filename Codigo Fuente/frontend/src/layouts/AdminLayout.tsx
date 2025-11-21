@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 
 // --- CAMBIO CLAVE AQUÍ ---
 // Importamos los estilos avanzados del Dashboard Vigilante
@@ -36,7 +36,13 @@ const AdminLayout: React.FC = () => {
       {/* Usamos las clases del CSS del Vigilante para la Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.navLeft}>
-          <img src="/img/SmartCar.png" alt="SmartCar Logo" className={styles.logo} />
+          <Link to="/admin/inicio">
+            <img
+              src="/img/SmartCar.png"
+              alt="SmartCar logo showing a stylized car icon next to the word SmartCar, serving as a clickable link to the admin dashboard; conveys a professional, trustworthy tone and a focus on vehicle monitoring in a clean app interface"
+              className={styles.logo}
+            />
+          </Link>
         </div>
         <div className={styles.navRight}>
           <NavLink to="/admin/inicio" className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}>

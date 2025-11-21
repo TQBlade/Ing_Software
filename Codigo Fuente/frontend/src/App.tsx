@@ -18,6 +18,7 @@ import GestionVigilante from './pages/GestionVigilante.jsx'
 import AlertasPage from './pages/AlertasPage.jsx'
 import CalendarioAdmin from './pages/CalendarioAdmin.jsx'
 import CalendarioVigilante from './pages/CalendarioVigilante.jsx'
+import VehiculosDentro from './pages/VehiculosDentro.jsx'
 
 
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="vehiculos" element={<VehiculosPage />} />
         <Route path="personas" element={<PersonasPage />} />
         <Route path="calendario" element={<CalendarioVigilante />} />
+        <Route path="vehiculos_dentro" element={<VehiculosDentro />} />
 
         {/* Default vigilante → /vigilante/inicio */}
         <Route index element={<Navigate to="inicio" replace />} />
