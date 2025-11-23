@@ -150,7 +150,7 @@ const DashboardVigilantePage: React.FC = () => {
         <section className={styles.tarjeta}>
           <h2>Gestión de Vehículos</h2>
           <p>Total registrados: <span id="totalVehiculos">{totalVehiculos}</span></p>
-          <Link to="/vigilante/gestion" className={styles.navLink}><button>Ver Vehículos</button></Link>
+          <Link to="/vigilante/vehiculos" className={styles.navLink}><button>Ver Vehículos</button></Link>
         </section>
       </main>
   );

@@ -76,74 +76,82 @@ const LoginPage: React.FC = () => {
     // ============================================================
     // 🎨 UI DEL LOGIN
     // ============================================================
+    // ... resto del código ...
+
+    // 4. Estructura JSX
     return (
-        <div className={styles.loginContainer}>
-            <div className={styles.logo}>
-                <img src="/img/logo.png" alt="SmartCar Logo" />
-            </div>
-
-            <h1>Bienvenido a SmartCar</h1>
-            <p>Inicia sesión para continuar</p>
-
-            <form id="loginForm" onSubmit={handleLoginSubmit}>
-                <div className={styles.formGroup}>
-                    <label htmlFor="usuario">Usuario</label>
-                    <input
-                        type="text"
-                        id="usuario"
-                        name="usuario"
-                        placeholder="Ingresa tu usuario"
-                        required
-                        value={usuario}
-                        onChange={(e) => setUsuario(e.target.value)}
-                    />
+        // NUEVO WRAPPER: Contiene el fondo y centra la tarjeta
+        <div className={styles.loginWrapper}>
+            
+            <div className={styles.loginContainer}>
+                <div className={styles.logo}>
+                    <img src="/img/logo.png" alt="SmartCar Logo" />
                 </div>
 
-                <div className={styles.formGroup}>
-                    <label htmlFor="clave">Contraseña</label>
-                    <input
-                        type="password"
-                        id="clave"
-                        name="clave"
-                        placeholder="Ingresa tu contraseña"
-                        required
-                        value={clave}
-                        onChange={(e) => setClave(e.target.value)}
-                    />
-                </div>
+                <h1>Bienvenido a SmartCar</h1>
+                {/* ... resto del formulario igual ... */}
+                <p>Inicia sesión para continuar</p>
 
-                <div className={styles.roles}>
-                    <label>
+                <form id="loginForm" onSubmit={handleLoginSubmit}>
+                    {/* ... tus inputs ... */}
+                    <div className={styles.formGroup}>
+                        <label htmlFor="usuario">Usuario</label>
                         <input
-                            type="radio"
-                            name="rol"
-                            value="Administrador"
-                            checked={rol === 'Administrador'}
-                            onChange={(e) => setRol(e.target.value)}
-                        /> Administrador
-                    </label>
+                            type="text"
+                            id="usuario"
+                            name="usuario"
+                            placeholder="Ingresa tu usuario"
+                            required
+                            value={usuario}
+                            onChange={(e) => setUsuario(e.target.value)}
+                        />
+                    </div>
 
-                    <label>
+                    <div className={styles.formGroup}>
+                        <label htmlFor="clave">Contraseña</label>
                         <input
-                            type="radio"
-                            name="rol"
-                            value="Vigilante"
-                            checked={rol === 'Vigilante'}
-                            onChange={(e) => setRol(e.target.value)}
-                        /> Vigilante
-                    </label>
-                </div>
+                            type="password"
+                            id="clave"
+                            name="clave"
+                            placeholder="Ingresa tu contraseña"
+                            required
+                            value={clave}
+                            onChange={(e) => setClave(e.target.value)}
+                        />
+                    </div>
 
-                <button type="submit" id="btnLogin" disabled={loading}>
-                    {loading ? 'Iniciando...' : 'Iniciar Sesión'}
-                </button>
+                    <div className={styles.roles}>
+                        <label>
+                            <input
+                                type="radio"
+                                name="rol"
+                                value="Administrador"
+                                checked={rol === 'Administrador'}
+                                onChange={(e) => setRol(e.target.value)}
+                            /> Administrador
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                name="rol"
+                                value="Vigilante"
+                                checked={rol === 'Vigilante'}
+                                onChange={(e) => setRol(e.target.value)}
+                            /> Vigilante
+                        </label>
+                    </div>
 
-                {alert.show && (
-                    <div className={`${styles.alert} ${styles[alert.type]}`}>
+                    <button type="submit" id="btnLogin" disabled={loading}>
+                        {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+                    </button>
+
+                    <div 
+                        className={`${styles.alert} ${styles[alert.type]} ${alert.show ? styles.show : ''}`}
+                    >
                         {alert.message}
                     </div>
-                )}
-            </form>
+                </form>
+            </div>
         </div>
     );
 };

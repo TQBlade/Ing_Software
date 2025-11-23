@@ -3,8 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 
 // --- CAMBIO CLAVE AQUÍ ---
 // Importamos los estilos avanzados del Dashboard Vigilante
-import styles from '../pages/DashboardVigilantePage.module.css';
-
+import styles from './AdminLayout.module.css'
 interface IUserInfo {
   nombre?: string;
   rol?: string;
