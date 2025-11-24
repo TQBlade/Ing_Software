@@ -8,7 +8,7 @@ from psycopg2.extras import RealDictCursor # IMPORTANTE: Para cursores de diccio
 
 # Importamos la función de auditoría
 from core.controller_personas import _registrar_auditoria 
-
+from backend.core.auditoria_utils import registrar_auditoria_global
 
 # --- Funciones del CRUD de Vehiculos (Corregido) ---
 
@@ -183,13 +183,12 @@ def actualizar_vehiculo_controller(id_vehiculo, data, usuario_actual):
         conn.commit()
 
         # 5. Registrar Auditoría
-        _registrar_auditoria(
-            id_vigilante=id_vigilante_actual,
-            entidad='vehiculo',
-            id_entidad=id_vehiculo,
-            accion='ACTUALIZAR',
-            datos_previos=json.dumps(vehiculo_anterior.to_dict(), default=str),
-            datos_nuevos=json.dumps(vehiculo_actualizado.to_dict(), default=str)
+        registrar_auditoria_global(
+            id_usuario=id_vigilante_actual, # Asegúrate de usar el ID del usuario logueado
+            entidad='persona',
+            id_entidad=id_persona_nueva,
+            accion='CREAR',
+            datos_nuevos=nueva_persona.to_dict()
         )
         return True
 

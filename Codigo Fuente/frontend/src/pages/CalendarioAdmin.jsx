@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { format, getDay, parse, startOfWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useCallback, useEffect, useState } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { format, parse, startOfWeek, getDay } from 'date-fns';
-import { es } from 'date-fns/locale';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const locales = { 'es': es };
@@ -99,7 +99,7 @@ const CalendarioAdmin = () => {
       {/* 1. HEADER SUPERIOR */}
       <div className="bg-white shadow-sm border-bottom px-4 py-3 d-flex justify-content-between align-items-center" style={{ flexShrink: 0 }}>
         <h1 className="h4 mb-0 fw-bold text-dark">Gestión de Eventos</h1>
-        <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate('/admin/gestion')}>Volver</button>
+        <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate('/admin/gestion_a')}>Volver</button>
       </div>
 
       {/* 2. CONTENEDOR DE CONTENIDO (Sidebar + Calendario) */}

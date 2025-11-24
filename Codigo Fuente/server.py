@@ -7,6 +7,7 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import jwt
 import os
+from backend.core.auditoria_utils import registrar_auditoria_global
 from functools import wraps
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend')))
@@ -130,6 +131,15 @@ def login():
         }, app.config["SECRET_KEY"], algorithm="HS256")
         
         print(f"✅ Login exitoso: {user['usuario']} ({user['rol']}) ID: {user['id_audit']}")
+        
+        # --- NUEVO: AUDITORÍA DE LOGIN ---
+        registrar_auditoria_global(
+            id_usuario=user["id_audit"],  # Este es el 'nu' de tmusuarios
+            entidad="SISTEMA",
+            id_entidad=0,
+            accion="INICIO_SESION",
+            datos_nuevos={"usuario": user["usuario"], "rol": user["rol"]}
+        )
 
         return jsonify({
             "status": "ok",
@@ -568,9 +578,14 @@ def delete_evento(id_evento):
     """Eliminar evento (Solo Admin)"""
     if request.usuario_actual.get('rol') != 'Administrador':
         return jsonify({"error": "No autorizado"}), 403
+    
     try:
-        eliminar_evento_controller(id_evento)
-        return jsonify({"mensaje": "Evento eliminado"}), 200
+        # CORRECCIÓN: Pasamos 'request.usuario_actual' como segundo parámetro
+        if eliminar_evento_controller(id_evento, request.usuario_actual):
+            return jsonify({"mensaje": "Evento eliminado correctamente"}), 200
+        else:
+            return jsonify({"error": "Evento no encontrado o no se pudo eliminar"}), 404
+            
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

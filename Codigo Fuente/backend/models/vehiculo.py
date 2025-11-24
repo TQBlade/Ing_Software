@@ -1,5 +1,5 @@
 # backend/models/vehiculo.py
-# Representación de la tabla 'vehiculo' (alineada con bd_carros.sql)
+from backend.core.db.connection import get_connection
 
 class Vehiculo:
     def __init__(self, id_vehiculo, placa, tipo, color, id_persona):
@@ -36,3 +36,32 @@ class Vehiculo:
             color=data.get("color"),
             id_persona=data.get("id_persona")
         )
+
+# ==========================================================
+# NUEVA FUNCIÓN PARA REGISTRAR INVITADOS (EVENTOS)
+# ==========================================================
+def registrar_vehiculo_invitado_db(placa):
+    """
+    Registra un vehículo automáticamente asignado a la persona genérica (ID 9999).
+    Tipo: 'Invitado', Color: 'Sin especificar'.
+    Requiere que hayas ejecutado el SQL para crear la persona 9999.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        # ID 9999 es el usuario 'INVITADO EVENTO'
+        sql = """
+            INSERT INTO vehiculo (placa, tipo, color, id_persona)
+            VALUES (%s, 'Invitado', 'Sin especificar', 9999)
+            RETURNING id_vehiculo
+        """
+        cur.execute(sql, (placa.upper(),))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Error registrando vehículo invitado: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
