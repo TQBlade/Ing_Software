@@ -128,6 +128,8 @@ CREATE TABLE identificador (
 
 -- Tabla acceso
 -- NOTA: id_vehiculo es NULLABLE para permitir registrar accesos denegados de placas desconocidas
+-- Tabla acceso
+-- NOTA: id_vehiculo es NULLABLE para permitir registrar accesos denegados de placas desconocidas
 CREATE TABLE acceso (
     id_acceso SERIAL PRIMARY KEY,
     fecha_hora TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -136,6 +138,7 @@ CREATE TABLE acceso (
     id_vehiculo INTEGER, 
     id_punto INTEGER NOT NULL,
     id_vigilante INTEGER NOT NULL,
+    hora_salida TIMESTAMP DEFAULT NULL, -- <<-- AGREGA ESTA LÍNEA EXACTAMENTE AQUÍ
     FOREIGN KEY (id_vehiculo) REFERENCES vehiculo(id_vehiculo) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_punto) REFERENCES punto_de_control(id_punto) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_vigilante) REFERENCES vigilante(id_vigilante) ON UPDATE CASCADE ON DELETE RESTRICT

@@ -470,15 +470,24 @@ def get_dashboard_data():
 # ===========================================================
 # RUTA PARA HISTORIAL DE ACCESOS
 # 1. Ruta para llenar la Tabla (GET)
+# Busca la ruta existente y REEMPLÁZALA por esta:
 @app.route("/api/accesos", methods=["GET"])
 @token_requerido
 def get_historial_accesos():
     try:
-        historial = obtener_historial_accesos()
+        # Recogemos los parámetros de la URL (Query Params)
+        filtros = {
+            "placa": request.args.get('placa'),
+            "tipo": request.args.get('tipo'),
+            "desde": request.args.get('desde'),
+            "hasta": request.args.get('hasta')
+        }
+        
+        # Llamamos al controlador con los filtros
+        historial = obtener_historial_accesos(filtros)
         return jsonify(historial), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 # 2. Ruta para el Modal de OCR (POST)
 @app.route("/api/accesos/validar", methods=["POST"])
 # @token_requerido  <-- OJO: Tu frontend modal NO está enviando token en el fetch. 

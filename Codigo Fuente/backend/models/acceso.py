@@ -1,62 +1,93 @@
-from core.db import get_db_connection
-import psycopg2
+# backend/models/acceso.py
+from backend.core.db.connection import get_connection
 
-def create_acceso(tipo, resultado, observaciones, oid_punto, oid_vigilante, oid_vehiculo):
+def verificar_vehiculo_dentro(placa):
     """
-    Registra un nuevo evento de acceso en la base de datos.
+    Busca si hay un registro de esta placa que tenga fecha de entrada 
+    pero NO tenga fecha de salida (hora_salida IS NULL).
     """
-    conn = get_db_connection()
-    if not conn:
-        return None
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    # Buscamos la última entrada que tenga salida NULL (vacía)
+    sql = """
+        SELECT a.id_acceso 
+        FROM acceso a
+        JOIN vehiculo v ON a.id_vehiculo = v.id_vehiculo
+        WHERE v.placa = %s AND a.hora_salida IS NULL
+    """
+    cur.execute(sql, (placa,))
+    resultado = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if resultado:
+        return resultado[0] # Retorna el ID del acceso pendiente
+    return None
 
+def registrar_salida_db(id_acceso):
+    """
+    Actualiza el registro existente poniendo la hora actual en hora_salida.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
     try:
-        cur = conn.cursor()
-        query = """
-            INSERT INTO acceso (tipo, resultado, observaciones, oid_punto, oid_vigilante, oid_vehiculo)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id_acceso;
+        # Actualizamos la hora de salida y el resultado
+        sql = """
+            UPDATE acceso 
+            SET hora_salida = CURRENT_TIMESTAMP, 
+                resultado = 'Salida Exitosa'
+            WHERE id_acceso = %s
         """
-        cur.execute(query, (tipo, resultado, observaciones, oid_punto, oid_vigilante, oid_vehiculo))
-        id_acceso = cur.fetchone()[0]
+        cur.execute(sql, (id_acceso,))
         conn.commit()
-        cur.close()
-        return id_acceso
+        return True
     except Exception as e:
-        print(f"Error al crear acceso: {e}")
         conn.rollback()
-        return None
+        print(f"Error registrando salida: {e}")
+        return False
     finally:
+        cur.close()
         conn.close()
 
-def get_ultimos_accesos(limite=10):
+def registrar_entrada_db(placa, id_vigilante):
     """
-    Obtiene los últimos accesos para mostrar en el Dashboard o Historial.
+    Crea un nuevo registro de acceso.
+    CORREGIDO: No inserta id_persona (no existe en tabla acceso).
+    CORREGIDO: Inserta id_punto (obligatorio).
     """
-    conn = get_db_connection()
-    if not conn:
-        return []
+    conn = get_connection()
+    cur = conn.cursor()
     try:
-        cur = conn.cursor()
-        # Hacemos JOIN para traer la placa del vehículo
-        query = """
-            SELECT a.fecha_hora, v.placa, a.tipo, a.resultado
-            FROM acceso a
-            LEFT JOIN vehiculo v ON a.oid_vehiculo = v.id_vehiculo
-            ORDER BY a.fecha_hora DESC
-            LIMIT %s;
-        """
-        cur.execute(query, (limite,))
-        rows = cur.fetchall()
+        # 1. Obtener ID Vehiculo (validamos que exista)
+        cur.execute("SELECT id_vehiculo FROM vehiculo WHERE placa = %s", (placa,))
+        vehiculo = cur.fetchone()
         
-        # Formatear resultados como lista de diccionarios
-        accesos = [
-            {"fecha": row[0].strftime("%Y-%m-%d %H:%M:%S"), "placa": row[1] or "Desconocido", "tipo": row[2], "resultado": row[3]}
-            for row in rows
-        ]
-        cur.close()
-        return accesos
+        if not vehiculo:
+            return {"status": "error", "mensaje": "Vehículo no registrado"}
+
+        id_vehiculo = vehiculo[0]
+        
+        # DEFINICIÓN DE PUNTO DE CONTROL
+        # Según tu SQL: id_punto 1 = 'Entrada'
+        ID_PUNTO_ENTRADA = 1 
+
+        # 2. Insertar Entrada
+        # Eliminamos 'id_persona' de la lista de columnas
+        # Agregamos 'id_punto'
+        sql = """
+            INSERT INTO acceso (id_vehiculo, id_punto, id_vigilante, fecha_hora, resultado, hora_salida)
+            VALUES (%s, %s, %s, CURRENT_TIMESTAMP, 'Acceso Concedido - Entrada', NULL)
+        """
+        
+        cur.execute(sql, (id_vehiculo, ID_PUNTO_ENTRADA, id_vigilante))
+        conn.commit()
+        
+        return {"status": "ok", "mensaje": "Entrada registrada"}
     except Exception as e:
-        print(f"Error al obtener historial: {e}")
-        return []
+        conn.rollback()
+        print(f"Error SQL registrar_entrada: {e}")
+        return {"status": "error", "mensaje": str(e)}
     finally:
+        cur.close()
         conn.close()
