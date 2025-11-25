@@ -224,6 +224,27 @@ CREATE TABLE auditoria (
     FOREIGN KEY (id_usuario) REFERENCES tmusuarios(nu) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
+-- Correcciones
+-- Agregamos la columna hora_salida a la tabla acceso 
+ALTER TABLE acceso 
+ADD COLUMN hora_salida TIMESTAMP DEFAULT NULL;
+
+-- Insertamos una persona "comodín" para los invitados de eventos
+-- Usamos un ID alto (ej. 9999) para evitar conflictos
+INSERT INTO persona (id_persona, doc_identidad, nombre, tipo_persona, estado)
+VALUES (9999, 'INVITADO', 'INVITADO EVENTO', 'VISITANTE', 1)
+ON CONFLICT (id_persona) DO NOTHING;
+
+-- Aseguramos que la secuencia no intente usar ese ID
+SELECT setval('persona_id_persona_seq', (SELECT MAX(id_persona) FROM persona));
+
+INSERT INTO persona (id_persona, doc_identidad, nombre, tipo_persona, estado)
+VALUES (9999, 'INVITADO', 'INVITADO EVENTO', 'VISITANTE', 1)
+ON CONFLICT (id_persona) DO NOTHING;
+
+-- Esto actualiza el contador al número más alto que exista actualmente en la tabla
+SELECT setval('evento_id_evento_seq', (SELECT MAX(id_evento) FROM evento));
+
 
 -- 3. INSERCIÓN DE DATOS (DATA SEEDING)
 -- ====================================================================

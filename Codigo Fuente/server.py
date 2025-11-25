@@ -49,9 +49,9 @@ from backend.core.controller_calendario import (
     verificar_evento_controller
 )
 # ===========================================================
-# importar controladores de incidencias
-from backend.core.controller_incidencias import obtener_vehiculos_en_patio, crear_incidente_manual
-
+# importar controladores de incidencias y alertas
+from backend.core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller, obtener_mis_reportes_controller
+from backend.core.controller_incidencias import obtener_vehiculos_en_patio, crear_incidente_manual, crear_novedad_general
 # ===========================================================
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -604,6 +604,31 @@ def verify_evento(id_evento):
 
 # ===========================================================
 #ruta para obtener vehículos en patio
+@app.route("/api/vigilante/mis-reportes", methods=["GET"])
+@token_requerido
+def get_mis_reportes():
+    """Historial de reportes del vigilante actual"""
+    try:
+        id_vigilante = request.usuario_actual['id_audit']
+        reportes = obtener_mis_reportes_controller(id_vigilante)
+        return jsonify(reportes), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/vigilante/novedad-general", methods=["POST"])
+@token_requerido
+def post_novedad_general():
+    """Crear novedad sin vehículo asociado"""
+    try:
+        data = request.get_json()
+        id_vigilante = request.usuario_actual['id_audit']
+        if crear_novedad_general(data, id_vigilante):
+            return jsonify({"mensaje": "Novedad registrada"}), 201
+        else:
+            return jsonify({"error": "No se pudo registrar"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/vigilante/vehiculos-en-patio", methods=["GET"])
 @token_requerido
 def get_vehiculos_patio():
@@ -618,13 +643,11 @@ def get_vehiculos_patio():
 def post_reportar_incidente():
     try:
         data = request.get_json()
-        # Usamos el id_audit del token como id_vigilante
         id_vigilante = request.usuario_actual['id_audit']
-        
         if crear_incidente_manual(data, id_vigilante):
-            return jsonify({"mensaje": "Incidente reportado correctamente"}), 201
+            return jsonify({"mensaje": "Incidente reportado"}), 201
         else:
-            return jsonify({"error": "No se pudo crear el reporte"}), 500
+            return jsonify({"error": "Error al reportar"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 # ===========================================================
