@@ -1,5 +1,6 @@
 # backend/models/vehiculo.py
 from backend.core.db.connection import get_connection
+import json
 
 class Vehiculo:
     def __init__(self, id_vehiculo, placa, tipo, color, id_persona):
@@ -38,13 +39,12 @@ class Vehiculo:
         )
 
 # ==========================================================
-# NUEVA FUNCIÓN PARA REGISTRAR INVITADOS (EVENTOS)
+# FUNCIÓN QUE TE FALTABA (Copia esto al final del archivo)
 # ==========================================================
 def registrar_vehiculo_invitado_db(placa):
     """
     Registra un vehículo automáticamente asignado a la persona genérica (ID 9999).
     Tipo: 'Invitado', Color: 'Sin especificar'.
-    Requiere que hayas ejecutado el SQL para crear la persona 9999.
     """
     conn = get_connection()
     cur = conn.cursor()

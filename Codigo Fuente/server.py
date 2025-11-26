@@ -2,22 +2,28 @@
 #  SmartCar - Servidor Principal con Seguridad JWT
 # ===========================================================
 import sys
-from flask import Flask, jsonify, request, render_template, send_from_directory
+import os
+from flask import Flask, jsonify, request, render_template, send_from_directory, send_file
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import jwt
-import os
-from backend.core.auditoria_utils import registrar_auditoria_global
 from functools import wraps
+from io import BytesIO
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
+# Configurar rutas del sistema
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend')))
 
-# Importar funciones de conexión y modelo de usuario
+# ===========================================================
+# IMPORTACIONES DEL BACKEND
+# ===========================================================
 from backend.core.db.connection import get_connection
 from backend.models.user_model import verificar_usuario
+from backend.core.auditoria_utils import registrar_auditoria_global # Nueva Auditoría Centralizada
 
-# ===========================================================  
-# IMPORTAR RUTAS DE PERSONAS Y VEHÍCULOS
+# Controladores
 from backend.core.controller_personas import (
     desactivar_persona_controller,
     obtener_personas_controller,
@@ -30,17 +36,10 @@ from backend.core.controller_vehiculos import (
     crear_vehiculo_controller,
     actualizar_vehiculo_controller
 )
-#  ===========================================================
-# IMPORTAR FUNCIONES DE AUDITORÍA
-from backend.models.auditoria import obtener_historial_auditoria
-# ===========================================================
-#importar controladores de accesos
 from backend.core.controller_accesos import (
     obtener_historial_accesos, 
     procesar_validacion_acceso
 )
-# ===========================================================
-#importar controladores de calendario
 from backend.core.controller_calendario import (
     obtener_eventos_controller,
     crear_evento_controller,
@@ -48,12 +47,33 @@ from backend.core.controller_calendario import (
     eliminar_evento_controller,
     verificar_evento_controller
 )
+from backend.core.controller_incidencias import (
+    obtener_vehiculos_en_patio, 
+    crear_incidente_manual,
+    obtener_estado_actual_patio, # Nuevo
+    crear_novedad_general,       # Nuevo
+    obtener_historial_vigilante  # Nuevo
+)
+from backend.core.controller_alertas import (
+    obtener_alertas_controller, 
+    eliminar_alerta_controller
+)
+from backend.models.auditoria import obtener_historial_auditoria
+from backend.models.dashboard_model import (
+    obtener_ultimos_accesos,
+    contar_total_vehiculos,
+    contar_alertas_activas,
+    buscar_placa_bd
+)
+from backend.models.admin_model import (
+    obtener_datos_dashboard,
+    obtener_accesos_detalle,
+    registrar_vigilante,
+    obtener_data_reporte_completo # <--- NUEVA IMPORTACIÓN
+)
 # ===========================================================
-# importar controladores de incidencias y alertas
-from backend.core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller, obtener_mis_reportes_controller
-from backend.core.controller_incidencias import obtener_vehiculos_en_patio, crear_incidente_manual, crear_novedad_general
+# CONFIGURACIÓN FLASK
 # ===========================================================
-# RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR, "frontend", "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "frontend", "static")
@@ -61,13 +81,6 @@ STATIC_DIR = os.path.join(BASE_DIR, "frontend", "static")
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 CORS(app)
 
-
-# ===========================================================
-# CONFIGURACIÓN INICIAL
-# ===========================================================
-
-
-# 🔒 Clave secreta para JWT
 app.config["SECRET_KEY"] = "SmartCar_SeguridadUltra_2025"
 
 # ===========================================================
@@ -83,7 +96,6 @@ def token_requerido(f):
         try:
             token = token.replace("Bearer ", "")
             datos = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-            # ➡️ Guardamos los datos del token en el request
             request.usuario_actual = datos
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expirado"}), 401
@@ -93,18 +105,13 @@ def token_requerido(f):
         return f(*args, **kwargs)
     return decorador
 
-
 # ===========================================================
-# RUTAS PÚBLICAS
+# RUTAS PÚBLICAS & LOGIN
 # ===========================================================
 @app.route("/")
 def index():
-    """Página principal: formulario de login"""
     return render_template("login.html")
 
-# ===========================================================
-# RUTA DE LOGIN
-# ===========================================================
 @app.route("/login", methods=["POST"])
 def login():
     try:
@@ -116,25 +123,21 @@ def login():
         if not usuario or not clave or not rol:
             return jsonify({"error": "Faltan campos requeridos"}), 400
 
-        # Verificar usuario en la base
         user = verificar_usuario(usuario, clave, rol)
         if not user:
             return jsonify({"error": "Usuario, clave o rol incorrectos"}), 401
 
-        # El 'user' tiene 'id_audit' (que es el 'nu' de tmusuarios)
-        # Lo incluimos en el token.
+        # Generar Token
         token = jwt.encode({
             "usuario": user["usuario"],
             "rol": user["rol"],
-            "id_audit": user["id_audit"], # <-- ID de auditoría
-            "exp": datetime.utcnow() + timedelta(hours=2)
+            "id_audit": user["id_audit"], # ID real del usuario (nu)
+            "exp": datetime.utcnow() + timedelta(hours=8)
         }, app.config["SECRET_KEY"], algorithm="HS256")
         
-        print(f"✅ Login exitoso: {user['usuario']} ({user['rol']}) ID: {user['id_audit']}")
-        
-        # --- NUEVO: AUDITORÍA DE LOGIN ---
+        # --- AUDITORÍA LOGIN ---
         registrar_auditoria_global(
-            id_usuario=user["id_audit"],  # Este es el 'nu' de tmusuarios
+            id_usuario=user["id_audit"],
             entidad="SISTEMA",
             id_entidad=0,
             accion="INICIO_SESION",
@@ -156,38 +159,19 @@ def login():
         return jsonify({"error": "Error interno del servidor"}), 500
 
 # ===========================================================
-# RUTAS PROTEGIDAS
+# RUTAS DASHBOARD VIGILANTE (Info Básica)
 # ===========================================================
-# IMPORTAR CONTROLADORES DE ALERTAS
-from backend.core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller
-# ================================================
-# DASHBOARD VIGILANTE (Rutas API)
-# ================================================
-@app.route("/dashboard_vigilante")
-def dashboard_vigilante():
-    return render_template("dashboard_vigilante.html")
-
-from backend.models.dashboard_model import (
-    obtener_ultimos_accesos,
-    contar_total_vehiculos,
-    contar_alertas_activas,
-    buscar_placa_bd
-)
-
 @app.route("/api/ultimos_accesos", methods=["GET"])
 def api_ultimos_accesos():
-    data = obtener_ultimos_accesos()
-    return jsonify(data)
+    return jsonify(obtener_ultimos_accesos())
 
 @app.route("/api/total_vehiculos", methods=["GET"])
 def api_total_vehiculos():
-    data = contar_total_vehiculos()
-    return jsonify(data)
+    return jsonify(contar_total_vehiculos())
 
 @app.route("/api/alertas_activas", methods=["GET"])
 def api_alertas_activas():
-    data = contar_alertas_activas()
-    return jsonify(data)
+    return jsonify(contar_alertas_activas())
 
 @app.route("/api/buscar_placa/<placa>", methods=["GET"])
 def api_buscar_placa(placa):
@@ -197,37 +181,21 @@ def api_buscar_placa(placa):
     else:
         return jsonify({"error": "Placa no encontrada"}), 404
 
-# ================================================
-# DASHBOARD ADMINISTRADOR (Rutas API)
-from backend.models.admin_model import (
-    obtener_datos_dashboard,
-    obtener_accesos_detalle,
-    registrar_vigilante
-)
-from io import BytesIO
-from flask import send_file
-from openpyxl import Workbook
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-
-@app.route("/dashboard_admin")
-def dashboard_admin():
-    return render_template("dashboard_admin.html")
-
+# ===========================================================
+# RUTAS DASHBOARD ADMIN
+# ===========================================================
 @app.route("/api/admin/resumen", methods=["GET"])
-@token_requerido # Protegemos la ruta
+@token_requerido
 def api_admin_resumen():
-    data = obtener_datos_dashboard()
-    return jsonify(data)
+    return jsonify(obtener_datos_dashboard())
 
 @app.route("/api/admin/accesos", methods=["GET"])
-@token_requerido # Protegemos la ruta
+@token_requerido
 def api_admin_accesos():
-    data = obtener_accesos_detalle()
-    return jsonify(data)
+    return jsonify(obtener_accesos_detalle())
 
 @app.route("/api/admin/registrar_vigilante", methods=["POST"])
-@token_requerido # Protegemos la ruta
+@token_requerido
 def api_registrar_vigilante():
     data = request.get_json()
     ok = registrar_vigilante(
@@ -249,76 +217,156 @@ def api_admin_auditoria():
         historial = obtener_historial_auditoria()
         return jsonify(historial), 200
     except Exception as e:
-        print(f"❌ Error obteniendo historial de auditoría: {e}")
-        return jsonify({"error": "Error interno del servidor"}), 500
-    
-@app.route("/api/admin/exportar/pdf", methods=["GET"])
-@token_requerido # Protegemos la ruta
-def exportar_pdf():
-    try:
-        data = obtener_accesos_detalle()
-        buffer = BytesIO()
-        pdf = canvas.Canvas(buffer, pagesize=letter)
-        pdf.setTitle("Reporte de Vehículos - SmartCar")
-        pdf.setFont("Helvetica-Bold", 14)
-        pdf.drawString(200, 750, "REPORTE DE VEHÍCULOS REGISTRADOS")
-        pdf.setFont("Helvetica", 11)
-        y = 720
-        pdf.drawString(40, y, "Placa")
-        pdf.drawString(120, y, "Tipo")
-        pdf.drawString(230, y, "Color")
-        pdf.drawString(340, y, "Propietario")
-        pdf.drawString(500, y, "Resultado")
-        y -= 20
-        for item in data:
-            pdf.drawString(40, y, item['placa'])
-            pdf.drawString(120, y, item['tipo'])
-            pdf.drawString(230, y, item['color'])
-            pdf.drawString(340, y, item['propietario'])
-            pdf.drawString(500, y, item['resultado'])
-            y -= 15
-            if y < 50:
-                pdf.showPage()
-                pdf.setFont("Helvetica", 11)
-                y = 750
-        pdf.save()
-        buffer.seek(0)
-        return send_file(buffer, as_attachment=True, download_name="reporte_vehiculos.pdf", mimetype="application/pdf")
-    except Exception as e:
-        print("❌ Error generando PDF:", e)
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/admin/exportar/excel", methods=["GET"])
-@token_requerido # Protegemos la ruta
-def exportar_excel():
-    try:
-        data = obtener_accesos_detalle()
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Vehículos"
-        ws.append(["Placa", "Tipo", "Color", "Propietario", "Resultado"])
-        for d in data:
-            ws.append([d["placa"], d["tipo"], d["color"], d["propietario"], d["resultado"]])
-        buffer = BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name="reporte_vehiculos.xlsx",
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    except Exception as e:
-        print("❌ Error generando Excel:", e)
         return jsonify({"error": str(e)}), 500
 
 # ===========================================================
-# --- CRUD de Personas ---
+# REPORTES (PDF / EXCEL)
+# ===========================================================
+@app.route("/api/admin/exportar/excel", methods=["GET"])
+@token_requerido
+def exportar_excel():
+    try:
+        # 1. Obtener fechas del filtro
+        fecha_inicio = request.args.get('inicio', datetime.now().strftime('%Y-%m-%d'))
+        fecha_fin = request.args.get('fin', datetime.now().strftime('%Y-%m-%d'))
 
+        # 2. Obtener Data Completa
+        reporte = obtener_data_reporte_completo(fecha_inicio, fecha_fin)
+        if not reporte:
+            return jsonify({"error": "Error obteniendo datos"}), 500
+
+        wb = Workbook()
+        
+        # --- HOJA 1: RESUMEN Y ESTADÍSTICAS ---
+        ws_resumen = wb.active
+        ws_resumen.title = "Resumen Gerencial"
+        ws_resumen.append(["REPORTE OPERATIVO SMARTCAR", f"Del {fecha_inicio} al {fecha_fin}"])
+        ws_resumen.append([])
+        
+        stats = reporte["estadisticas"]
+        pico = reporte["hora_pico"]
+        ws_resumen.append(["METRICA", "VALOR"])
+        ws_resumen.append(["Total Movimientos", stats['total_movimientos']])
+        ws_resumen.append(["Accesos Autorizados", stats['autorizados']])
+        ws_resumen.append(["Accesos Denegados", stats['denegados']])
+        if pico:
+            ws_resumen.append(["Hora Pico", f"{int(pico['hora'])}:00 - {int(pico['hora'])+1}:00 ({pico['cantidad']} vehs)"])
+
+        # --- HOJA 2: NOVEDADES VIGILANTES ---
+        ws_nov = wb.create_sheet("Novedades Vigilancia")
+        ws_nov.append(["Fecha", "Vigilante", "Asunto", "Descripción"])
+        for n in reporte["novedades"]:
+            ws_nov.append([n['fecha'], n['vigilante'], n['asunto'], n['descripcion']])
+
+        # --- HOJA 3: INCIDENTES RESUELTOS ---
+        ws_inc = wb.create_sheet("Incidentes Resueltos")
+        ws_inc.append(["Fecha Resolución", "Resolutor", "Tipo Alerta", "Acción Tomada"])
+        import json
+        for a in reporte["alertas_resueltas"]:
+            # Parseamos los JSON strings guardados en auditoria
+            prev = json.loads(a['datos_previos']) if isinstance(a['datos_previos'], str) else a['datos_previos']
+            new = json.loads(a['datos_nuevos']) if isinstance(a['datos_nuevos'], str) else a['datos_nuevos']
+            
+            tipo_alerta = prev.get('tipo', 'Desconocido') if prev else 'N/A'
+            resolucion = new.get('resolucion', 'Sin detalle') if new else 'N/A'
+            
+            ws_inc.append([a['fecha_resolucion'], a['resolutor'], tipo_alerta, resolucion])
+
+        # --- HOJA 4: DETALLE ACCESOS ---
+        ws_acc = wb.create_sheet("Log Accesos")
+        ws_acc.append(["Fecha", "Placa", "Tipo", "Resultado", "Vigilante"])
+        for acc in reporte["accesos"]:
+            ws_acc.append([acc['fecha'], acc['placa'], acc['tipo'], acc['resultado'], acc['vigilante']])
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name=f"Reporte_Completo_{fecha_inicio}.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/exportar/pdf", methods=["GET"])
+@token_requerido
+def exportar_pdf():
+    try:
+        fecha_inicio = request.args.get('inicio', datetime.now().strftime('%Y-%m-%d'))
+        fecha_fin = request.args.get('fin', datetime.now().strftime('%Y-%m-%d'))
+        
+        reporte = obtener_data_reporte_completo(fecha_inicio, fecha_fin)
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # --- HEADER ---
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, height - 50, "SmartCar - Informe Gerencial Operativo")
+        p.setFont("Helvetica", 12)
+        p.drawString(50, height - 70, f"Periodo: {fecha_inicio} al {fecha_fin}")
+
+        # --- ESTADÍSTICAS ---
+        y = height - 120
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, "1. Resumen Estadístico")
+        y -= 20
+        p.setFont("Helvetica", 10)
+        stats = reporte["estadisticas"]
+        p.drawString(70, y, f"• Total Movimientos: {stats['total_movimientos']}")
+        y -= 15
+        p.drawString(70, y, f"• Accesos Autorizados: {stats['autorizados']}")
+        y -= 15
+        p.drawString(70, y, f"• Accesos Denegados: {stats['denegados']}")
+        y -= 15
+        if reporte["hora_pico"]:
+            hp = reporte["hora_pico"]
+            p.drawString(70, y, f"• Hora Pico: {int(hp['hora'])}:00 horas ({hp['cantidad']} accesos)")
+        
+        # --- NOVEDADES ---
+        y -= 40
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, "2. Novedades y Observaciones (Últimas 10)")
+        y -= 20
+        p.setFont("Helvetica", 9)
+        for n in reporte["novedades"][:10]: # Limitamos a 10 para que quepa en 1 hoja demo
+            texto = f"{n['fecha']} - {n['vigilante']}: {n['asunto']} - {n['descripcion'][:50]}..."
+            p.drawString(70, y, texto)
+            y -= 15
+            if y < 50: 
+                p.showPage()
+                y = height - 50
+
+        # --- ALERTAS RESUELTAS ---
+        y -= 20
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, "3. Resolución de Incidentes")
+        y -= 20
+        p.setFont("Helvetica", 9)
+        import json
+        for a in reporte["alertas_resueltas"][:10]:
+            prev = json.loads(a['datos_previos']) if isinstance(a['datos_previos'], str) else a['datos_previos']
+            new = json.loads(a['datos_nuevos']) if isinstance(a['datos_nuevos'], str) else a['datos_nuevos']
+            tipo = prev.get('tipo', 'N/A') if prev else 'N/A'
+            resol = new.get('resolucion', 'N/A') if new else 'N/A'
+            
+            texto = f"{a['fecha_resolucion']} - {tipo} -> Acción: {resol} (Por: {a['resolutor']})"
+            p.drawString(70, y, texto)
+            y -= 15
+
+        p.save()
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="Informe_Gerencial.pdf", mimetype="application/pdf")
+
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
+
+# ===========================================================
+# CRUD PERSONAS
+# ===========================================================
 @app.route("/api/personas", methods=["GET"])
 @token_requerido
 def get_personas():
-    """Endpoint para OBTENER todas las personas activas."""
     try:
         personas = obtener_personas_controller()
         return jsonify(personas), 200
@@ -328,57 +376,38 @@ def get_personas():
 @app.route("/api/personas", methods=["POST"])
 @token_requerido
 def create_persona():
-    """Endpoint para CREAR una nueva persona."""
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
-        
-        # ✅ CORREGIDO: Pasamos el objeto 'usuario_actual' del token
         nuevo_id = crear_persona_controller(data, request.usuario_actual)
-        
-        return jsonify({"mensaje": "Persona creada exitosamente", "id_persona": nuevo_id}), 201
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 400
+        return jsonify({"mensaje": "Persona creada", "id_persona": nuevo_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/personas/<int:id_persona>", methods=["PUT"])
 @token_requerido
 def update_persona(id_persona):
-    """Endpoint para ACTUALIZAR una persona existente."""
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
-        
-        # ✅ CORREGIDO: Pasamos el objeto 'usuario_actual' del token
         actualizar_persona_controller(id_persona, data, request.usuario_actual)
-        
-        return jsonify({"mensaje": "Persona actualizada exitosamente"}), 200
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 404 if "no encontrada" in str(ve) else 400
+        return jsonify({"mensaje": "Persona actualizada"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
 @app.route("/api/personas/<int:id_persona>", methods=["DELETE"])
 @token_requerido
 def delete_persona(id_persona):
-    """Endpoint para DESACTIVAR una persona (borrado lógico)."""
     try:
         desactivar_persona_controller(id_persona, request.usuario_actual)
-        return jsonify({"mensaje": "Persona desactivada exitosamente"}), 200
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 404
+        return jsonify({"mensaje": "Persona desactivada"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- CRUD de Vehículos ---
-
+# ===========================================================
+# CRUD VEHÍCULOS
+# ===========================================================
 @app.route("/api/vehiculos", methods=["GET"])
 @token_requerido
 def get_vehiculos():
-    """Endpoint para OBTENER todos los vehículos."""
     try:
         vehiculos = obtener_vehiculos_controller()
         return jsonify(vehiculos), 200
@@ -388,48 +417,29 @@ def get_vehiculos():
 @app.route("/api/vehiculos", methods=["POST"])
 @token_requerido
 def create_vehiculo():
-    """Endpoint para CREAR un nuevo vehículo."""
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
-        
-        # ✅ CORREGIDO: Pasamos el objeto 'usuario_actual' del token
         nuevo_id = crear_vehiculo_controller(data, request.usuario_actual)
-        
-        return jsonify({"mensaje": "Vehículo creado exitosamente", "id_vehiculo": nuevo_id}), 201
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 400
+        return jsonify({"mensaje": "Vehículo creado", "id_vehiculo": nuevo_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/vehiculos/<int:id_vehiculo>", methods=["PUT"])
 @token_requerido
 def update_vehiculo(id_vehiculo):
-    """Endpoint para ACTUALIZAR un vehículo existente."""
     try:
         data = request.json
-        if not data:
-            return jsonify({"error": "Cuerpo de la petición vacío"}), 400
-        
-        # ✅ CORREGIDO: Pasamos el objeto 'usuario_actual' del token
         actualizar_vehiculo_controller(id_vehiculo, data, request.usuario_actual)
-        
-        return jsonify({"mensaje": "Vehículo actualizado exitosamente"}), 200
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 404 if "no encontrado" in str(ve) else 400
+        return jsonify({"mensaje": "Vehículo actualizado"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
 @app.route("/api/vehiculos/<int:id_vehiculo>", methods=["DELETE"])
 @token_requerido
 def delete_vehiculo(id_vehiculo):
-    """Endpoint para ELIMINAR un vehículo (borrado real)."""
     try:
         eliminar_vehiculo_controller(id_vehiculo, request.usuario_actual)
-        return jsonify({"mensaje": "Vehículo eliminado exitosamente"}), 200
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 404
+        return jsonify({"mensaje": "Vehículo eliminado"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -437,83 +447,38 @@ def delete_vehiculo(id_vehiculo):
 @app.route("/api/usuario", methods=["GET"])
 @token_requerido
 def obtener_usuario():
-    """Devuelve datos del usuario autenticado"""
     datos = request.usuario_actual
-    return jsonify({
-        "status": "ok",
-        "user": datos
-    }), 200
+    return jsonify({"status": "ok", "user": datos}), 200
 
-
-@app.route("/api/dashboard_vigilante", methods=["GET"])
-@token_requerido # Protegemos la ruta
-def get_dashboard_data():
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT TO_CHAR(fecha_hora, 'HH24:MI'),
-                   vehiculo.placa,
-                   CASE WHEN LOWER(resultado) LIKE '%concedido%' THEN 'Verde' ELSE 'Rojo' END AS estado
-            FROM acceso
-            JOIN vehiculo ON acceso.id_vehiculo = vehiculo.id_vehiculo
-            ORDER BY fecha_hora DESC LIMIT 5;
-        """)
-        historial = cur.fetchall()
-        cur.execute("SELECT COUNT(*) FROM alerta;")
-        alertas = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM vehiculo;")
-        total_vehiculos = cur.fetchone()[0]
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            "historial": historial,
-            "alertas": alertas,
-            "vehiculos": total_vehiculos
-        })
-
-    except Exception as e:
-        print("❌ Error cargando datos dashboard:", e)
-        return jsonify({"error": "Error al cargar datos"}), 500
-    
 # ===========================================================
-# RUTA PARA HISTORIAL DE ACCESOS
-# 1. Ruta para llenar la Tabla (GET)
-# Busca la ruta existente y REEMPLÁZALA por esta:
+# CONTROL DE ACCESOS (HISTORIAL Y OCR)
+# ===========================================================
 @app.route("/api/accesos", methods=["GET"])
 @token_requerido
 def get_historial_accesos():
     try:
-        # Recogemos los parámetros de la URL (Query Params)
         filtros = {
             "placa": request.args.get('placa'),
             "tipo": request.args.get('tipo'),
             "desde": request.args.get('desde'),
             "hasta": request.args.get('hasta')
         }
-        
-        # Llamamos al controlador con los filtros
         historial = obtener_historial_accesos(filtros)
         return jsonify(historial), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-# 2. Ruta para el Modal de OCR (POST)
+
 @app.route("/api/accesos/validar", methods=["POST"])
-# @token_requerido  <-- OJO: Tu frontend modal NO está enviando token en el fetch. 
-# Por ahora la dejamos abierta o debes actualizar el fetch en el modal.
 def validar_acceso_ocr():
     try:
-        # Pasamos el cuerpo crudo como espera tu función
-        # Asumimos ID vigilante 1 por defecto si no hay token
         respuesta, status = procesar_validacion_acceso(request.data, vigilante_id=1)
         return jsonify(respuesta), status
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-# ===========================================================
-# RUTA PARA ALERTAS
 
+# ===========================================================
+# ALERTAS (ADMIN)
+# ===========================================================
 @app.route("/api/admin/alertas", methods=["GET"])
 @token_requerido
 def get_alertas():
@@ -527,108 +492,21 @@ def get_alertas():
 @token_requerido
 def delete_alerta(id_alerta):
     try:
-        if eliminar_alerta_controller(id_alerta):
-            return jsonify({"mensaje": "Alerta resuelta/eliminada"}), 200
+        # Obtenemos la acción de resolución enviada desde el frontend (JSON body)
+        # Si no envían nada, usamos "Resolución General"
+        data = request.get_json() or {}
+        accion = data.get('accion_resolucion', 'Resolución General')
+
+        if eliminar_alerta_controller(id_alerta, request.usuario_actual, accion):
+            return jsonify({"mensaje": "Alerta resuelta y archivada"}), 200
         else:
-            return jsonify({"error": "No se pudo eliminar"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
-# ===========================================================
-# RUTAS PARA CALENDARIO DE EVENTOS
-@app.route("/api/eventos", methods=["GET"])
-@token_requerido
-def get_eventos():
-    """Obtener todos los eventos (Admin y Vigilante)"""
-    try:
-        eventos = obtener_eventos_controller()
-        return jsonify(eventos), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/eventos", methods=["POST"])
-@token_requerido
-def create_evento():
-    """Crear evento (Solo Admin)"""
-    if request.usuario_actual.get('rol') != 'Administrador':
-        return jsonify({"error": "No autorizado"}), 403
-    try:
-        data = request.get_json()
-        id_nuevo = crear_evento_controller(data, request.usuario_actual)
-        return jsonify({"mensaje": "Evento creado", "id": id_nuevo}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/eventos/<int:id_evento>", methods=["PUT"])
-@token_requerido
-def update_evento(id_evento):
-    """Actualizar evento (Solo Admin)"""
-    if request.usuario_actual.get('rol') != 'Administrador':
-        return jsonify({"error": "No autorizado"}), 403
-    try:
-        data = request.get_json()
-        actualizar_evento_controller(id_evento, data)
-        return jsonify({"mensaje": "Evento actualizado"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/eventos/<int:id_evento>", methods=["DELETE"])
-@token_requerido
-def delete_evento(id_evento):
-    """Eliminar evento (Solo Admin)"""
-    if request.usuario_actual.get('rol') != 'Administrador':
-        return jsonify({"error": "No autorizado"}), 403
-    
-    try:
-        # CORRECCIÓN: Pasamos 'request.usuario_actual' como segundo parámetro
-        if eliminar_evento_controller(id_evento, request.usuario_actual):
-            return jsonify({"mensaje": "Evento eliminado correctamente"}), 200
-        else:
-            return jsonify({"error": "Evento no encontrado o no se pudo eliminar"}), 404
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/eventos/<int:id_evento>/verificar", methods=["PUT"])
-@token_requerido
-def verify_evento(id_evento):
-    """Verificar evento (Vigilante y Admin)"""
-    # Aquí permitimos a ambos roles confirmar la realización del evento
-    try:
-        data = request.get_json()
-        verificado = data.get('verificado', True)
-        verificar_evento_controller(id_evento, verificado)
-        return jsonify({"mensaje": "Estado de verificación actualizado"}), 200
+            return jsonify({"error": "No se pudo resolver la alerta"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ===========================================================
-#ruta para obtener vehículos en patio
-@app.route("/api/vigilante/mis-reportes", methods=["GET"])
-@token_requerido
-def get_mis_reportes():
-    """Historial de reportes del vigilante actual"""
-    try:
-        id_vigilante = request.usuario_actual['id_audit']
-        reportes = obtener_mis_reportes_controller(id_vigilante)
-        return jsonify(reportes), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/vigilante/novedad-general", methods=["POST"])
-@token_requerido
-def post_novedad_general():
-    """Crear novedad sin vehículo asociado"""
-    try:
-        data = request.get_json()
-        id_vigilante = request.usuario_actual['id_audit']
-        if crear_novedad_general(data, id_vigilante):
-            return jsonify({"mensaje": "Novedad registrada"}), 201
-        else:
-            return jsonify({"error": "No se pudo registrar"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+# NOVEDADES Y REPORTES (VIGILANTE)
+# ===========================================================
 @app.route("/api/vigilante/vehiculos-en-patio", methods=["GET"])
 @token_requerido
 def get_vehiculos_patio():
@@ -645,33 +523,102 @@ def post_reportar_incidente():
         data = request.get_json()
         id_vigilante = request.usuario_actual['id_audit']
         if crear_incidente_manual(data, id_vigilante):
-            return jsonify({"mensaje": "Incidente reportado"}), 201
-        else:
-            return jsonify({"error": "Error al reportar"}), 500
+            return jsonify({"mensaje": "Reportado"}), 201
+        return jsonify({"error": "Error"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/vigilante/estado-patio", methods=["GET"])
+@token_requerido
+def get_estado_patio():
+    """Devuelve contador de vehículos y hora del servidor"""
+    data = obtener_estado_actual_patio()
+    return jsonify(data), 200
+
+@app.route("/api/vigilante/novedad", methods=["POST"])
+@token_requerido
+def post_novedad():
+    """Crea una novedad general (ej: Daño infraestructura)"""
+    data = request.get_json()
+    id_vigilante = request.usuario_actual['id_audit']
+    if crear_novedad_general(data, id_vigilante):
+        return jsonify({"mensaje": "Novedad registrada"}), 201
+    return jsonify({"error": "Error al registrar"}), 500
+
+@app.route("/api/vigilante/mis-reportes", methods=["GET"])
+@token_requerido
+def get_mis_reportes():
+    """Obtiene el historial de reportes del vigilante logueado"""
+    id_vigilante = request.usuario_actual['id_audit']
+    data = obtener_historial_vigilante(id_vigilante)
+    return jsonify(data), 200
+
 # ===========================================================
-# RUTA PARA ARCHIVOS ESTÁTICOS
+# CALENDARIO Y EVENTOS
+# ===========================================================
+@app.route("/api/eventos", methods=["GET"])
+@token_requerido
+def get_eventos():
+    try:
+        eventos = obtener_eventos_controller()
+        return jsonify(eventos), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos", methods=["POST"])
+@token_requerido
+def create_evento():
+    if request.usuario_actual.get('rol') != 'Administrador':
+        return jsonify({"error": "No autorizado"}), 403
+    try:
+        data = request.get_json()
+        id_nuevo = crear_evento_controller(data, request.usuario_actual)
+        return jsonify({"mensaje": "Evento creado", "id": id_nuevo}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos/<int:id_evento>", methods=["PUT"])
+@token_requerido
+def update_evento(id_evento):
+    if request.usuario_actual.get('rol') != 'Administrador':
+        return jsonify({"error": "No autorizado"}), 403
+    try:
+        data = request.get_json()
+        actualizar_evento_controller(id_evento, data)
+        return jsonify({"mensaje": "Evento actualizado"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos/<int:id_evento>", methods=["DELETE"])
+@token_requerido
+def delete_evento(id_evento):
+    if request.usuario_actual.get('rol') != 'Administrador':
+        return jsonify({"error": "No autorizado"}), 403
+    try:
+        # Pasamos usuario_actual para la auditoría
+        if eliminar_evento_controller(id_evento, request.usuario_actual):
+            return jsonify({"mensaje": "Evento eliminado correctamente"}), 200
+        else:
+            return jsonify({"error": "Evento no encontrado o no se pudo eliminar"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/eventos/<int:id_evento>/verificar", methods=["PUT"])
+@token_requerido
+def verify_evento(id_evento):
+    try:
+        data = request.get_json()
+        verificar_evento_controller(id_evento, data.get('verificado', True))
+        return jsonify({"mensaje": "Verificado"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ===========================================================
+# RUTA PARA ARCHIVOS ESTÁTICOS (Frontend)
 # ===========================================================
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory(app.static_folder, filename)
-
-# ===========================================================
-# TEST DE CONEXIÓN A BD
-# ===========================================================
-@app.route("/test_db")
-def test_db():
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT NOW();")
-        result = cur.fetchone()
-        cur.close()
-        conn.close()
-        return jsonify({"estado": "ok", "hora_bd": str(result[0])})
-    except Exception as e:
-        return jsonify({"estado": "error", "detalle": str(e)}), 500
 
 # ===========================================================
 # INICIO DEL SERVIDOR
