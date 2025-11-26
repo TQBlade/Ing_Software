@@ -7,24 +7,24 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import jwt
 import os
-from backend.core.auditoria_utils import registrar_auditoria_global
+from core.auditoria_utils import registrar_auditoria_global
 from functools import wraps
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend')))
 
 # Importar funciones de conexión y modelo de usuario
-from backend.core.db.connection import get_connection
-from backend.models.user_model import verificar_usuario
+from core.db.connection import get_connection
+from models.user_model import verificar_usuario
 
 # ===========================================================  
 # IMPORTAR RUTAS DE PERSONAS Y VEHÍCULOS
-from backend.core.controller_personas import (
+from core.controller_personas import (
     desactivar_persona_controller,
     obtener_personas_controller,
     crear_persona_controller,
     actualizar_persona_controller
 )
-from backend.core.controller_vehiculos import (
+from core.controller_vehiculos import (
     eliminar_vehiculo_controller,
     obtener_vehiculos_controller,
     crear_vehiculo_controller,
@@ -32,16 +32,16 @@ from backend.core.controller_vehiculos import (
 )
 #  ===========================================================
 # IMPORTAR FUNCIONES DE AUDITORÍA
-from backend.models.auditoria import obtener_historial_auditoria
+from models.auditoria import obtener_historial_auditoria
 # ===========================================================
 #importar controladores de accesos
-from backend.core.controller_accesos import (
+from core.controller_accesos import (
     obtener_historial_accesos, 
     procesar_validacion_acceso
 )
 # ===========================================================
 #importar controladores de calendario
-from backend.core.controller_calendario import (
+from core.controller_calendario import (
     obtener_eventos_controller,
     crear_evento_controller,
     actualizar_evento_controller,
@@ -50,8 +50,8 @@ from backend.core.controller_calendario import (
 )
 # ===========================================================
 # importar controladores de incidencias y alertas
-from backend.core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller, obtener_mis_reportes_controller
-from backend.core.controller_incidencias import obtener_vehiculos_en_patio, crear_incidente_manual, crear_novedad_general
+from core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller, obtener_mis_reportes_controller
+from core.controller_incidencias import obtener_vehiculos_en_patio, crear_incidente_manual, crear_novedad_general
 # ===========================================================
 # RUTAS CORRECTAS PARA FRONTEND
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -159,7 +159,7 @@ def login():
 # RUTAS PROTEGIDAS
 # ===========================================================
 # IMPORTAR CONTROLADORES DE ALERTAS
-from backend.core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller
+from core.controller_alertas import obtener_alertas_controller, eliminar_alerta_controller
 # ================================================
 # DASHBOARD VIGILANTE (Rutas API)
 # ================================================
@@ -167,7 +167,7 @@ from backend.core.controller_alertas import obtener_alertas_controller, eliminar
 def dashboard_vigilante():
     return render_template("dashboard_vigilante.html")
 
-from backend.models.dashboard_model import (
+from models.dashboard_model import (
     obtener_ultimos_accesos,
     contar_total_vehiculos,
     contar_alertas_activas,
@@ -199,7 +199,7 @@ def api_buscar_placa(placa):
 
 # ================================================
 # DASHBOARD ADMINISTRADOR (Rutas API)
-from backend.models.admin_model import (
+from models.admin_model import (
     obtener_datos_dashboard,
     obtener_accesos_detalle,
     registrar_vigilante
