@@ -199,10 +199,11 @@ def api_buscar_placa(placa):
 
 # ================================================
 # DASHBOARD ADMINISTRADOR (Rutas API)
-from models.admin_model import (
+from backend.models.admin_model import (
     obtener_datos_dashboard,
     obtener_accesos_detalle,
-    registrar_vigilante
+    registrar_vigilante_completo, # <--- Nueva función
+    obtener_todos_vigilantes      # <--- Nueva función
 )
 from io import BytesIO
 from flask import send_file
@@ -226,19 +227,30 @@ def api_admin_accesos():
     data = obtener_accesos_detalle()
     return jsonify(data)
 
+@app.route("/api/admin/vigilantes", methods=["GET"])
+@token_requerido
+def list_vigilantes():
+    try:
+        data = obtener_todos_vigilantes()
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/admin/registrar_vigilante", methods=["POST"])
-@token_requerido # Protegemos la ruta
+@token_requerido
 def api_registrar_vigilante():
+    # Ahora esperamos más datos en el JSON
     data = request.get_json()
-    ok = registrar_vigilante(
-        data.get("nombre"),
-        data.get("doc_identidad"),
-        data.get("telefono"),
-        data.get("id_rol")
-    )
+    
+    # Validaciones básicas
+    if not data.get('usuario') or not data.get('clave'):
+        return jsonify({"error": "Usuario y Clave son obligatorios para el acceso"}), 400
+
+    ok = registrar_vigilante_completo(data)
+    
     if ok:
-        return jsonify({"status": "ok"})
-    return jsonify({"error": "No se pudo registrar"}), 500
+        return jsonify({"mensaje": "Vigilante y Usuario creados exitosamente"}), 201
+    return jsonify({"error": "Error al registrar. Verifique si el usuario o documento ya existen."}), 500
 
 @app.route("/api/admin/auditoria", methods=["GET"])
 @token_requerido

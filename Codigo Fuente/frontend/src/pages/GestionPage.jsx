@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 const GestionPage = () => {
@@ -41,11 +40,11 @@ const GestionPage = () => {
       color: "danger" // Rojo
     },
     {
-      title: "Vigilantes",
-      desc: "Administrar el personal de seguridad.",
+      title: "Personal",
+      desc: "Administrar el personal de seguridad y accesos.",
       icon: "fas fa-user-shield",
-      link: "#", // Pendiente de definir si tendrá vista propia
-      color: "secondary" // Gris
+      link: "/admin/vigilantes", // <--- RUTA CORREGIDA
+      color: "secondary"
     }
   ];
 

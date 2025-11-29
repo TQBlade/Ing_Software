@@ -1,19 +1,14 @@
 -- ====================================================================
 -- SCRIPT FINAL DE INSTALACIÓN: SmartCar Parking System
--- Versión: Definitiva (Incluye Datos Masivos, Auditoría, Alertas y Calendario)
+-- Versión: Definitiva (Incluye Datos Masivos, Auditoría, Alertas, Calendario y Novedades)
 -- ====================================================================
 
 -- 1. CONFIGURACIÓN INICIAL DE LA BASE DE DATOS
 -- ====================================================================
--- Conexión a la base de datos predeterminada para poder borrar/crear
 \c postgres
 
-SELECT 'Paso 01: Iniciando el Script.....'  AS paso, pg_sleep(1);
-
--- Borrar base de datos si existe (¡CUIDADO! Esto borra todo lo anterior)
+-- Borrar base de datos si existe
 DROP DATABASE IF EXISTS bd_carros;
-
-SELECT 'Paso 02: Crear bd_carros .....'  AS paso, pg_sleep(1);
 
 -- Crear base de datos
 CREATE DATABASE bd_carros
@@ -24,13 +19,12 @@ WITH
     LC_CTYPE = 'es_ES.UTF-8'
     TEMPLATE = template0;
 
-SELECT 'Paso 03: Conectandose a bd_carros.....'  AS paso, pg_sleep(1);
 \c bd_carros
 
 -- 2. CREACIÓN DE TABLAS (ESTRUCTURA)
 -- ====================================================================
 
--- Tabla de Status (Referencia para el campo 'estado')
+-- Tabla de Status
 CREATE TABLE tmstatus (
     cods INTEGER NOT NULL PRIMARY KEY,
     dstatus VARCHAR(12) NOT NULL
@@ -47,7 +41,7 @@ CREATE TABLE persona (
     id_persona SERIAL PRIMARY KEY,
     doc_identidad VARCHAR(20) UNIQUE NOT NULL,
     nombre VARCHAR(100) NOT NULL,
-    tipo_persona VARCHAR(50) NOT NULL, -- Residente, Visitante, etc.
+    tipo_persona VARCHAR(50) NOT NULL, 
     estado INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (estado) REFERENCES tmstatus(cods) ON UPDATE CASCADE ON DELETE RESTRICT
 );
@@ -88,7 +82,7 @@ CREATE TABLE turno (
 -- Tabla punto_de_control
 CREATE TABLE punto_de_control (
     id_punto SERIAL PRIMARY KEY,
-    tipo VARCHAR(50) NOT NULL, -- Entrada, Salida
+    tipo VARCHAR(50) NOT NULL, 
     id_parqueadero INTEGER NOT NULL,
     FOREIGN KEY (id_parqueadero) REFERENCES parqueadero(id_parqueadero) ON UPDATE CASCADE ON DELETE RESTRICT
 );
@@ -126,19 +120,16 @@ CREATE TABLE identificador (
     FOREIGN KEY (estado) REFERENCES tmstatus(cods) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- Tabla acceso
--- NOTA: id_vehiculo es NULLABLE para permitir registrar accesos denegados de placas desconocidas
--- Tabla acceso
--- NOTA: id_vehiculo es NULLABLE para permitir registrar accesos denegados de placas desconocidas
+-- Tabla acceso (CON HORA_SALIDA)
 CREATE TABLE acceso (
     id_acceso SERIAL PRIMARY KEY,
     fecha_hora TIMESTAMP NOT NULL DEFAULT NOW(),
-    resultado VARCHAR(50) NOT NULL, -- Concedido, Denegado
+    resultado VARCHAR(50) NOT NULL, 
     observaciones TEXT,
     id_vehiculo INTEGER, 
     id_punto INTEGER NOT NULL,
     id_vigilante INTEGER NOT NULL,
-    hora_salida TIMESTAMP DEFAULT NULL, -- <<-- AGREGA ESTA LÍNEA EXACTAMENTE AQUÍ
+    hora_salida TIMESTAMP DEFAULT NULL, -- Nueva columna
     FOREIGN KEY (id_vehiculo) REFERENCES vehiculo(id_vehiculo) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_punto) REFERENCES punto_de_control(id_punto) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_vigilante) REFERENCES vigilante(id_vigilante) ON UPDATE CASCADE ON DELETE RESTRICT
@@ -199,78 +190,59 @@ CREATE TABLE evento (
     CONSTRAINT fk_evento_creador FOREIGN KEY(id_creador) REFERENCES tmusuarios(nu) ON DELETE SET NULL
 );
 
--- Tabla alerta (CORREGIDA: Apunta a tmusuarios)
+-- Tabla alerta
 CREATE TABLE alerta (
     id_alerta SERIAL PRIMARY KEY,
     tipo VARCHAR(50) NOT NULL,
     detalle TEXT,
     severidad VARCHAR(50),
     id_acceso INTEGER NOT NULL,
-    id_vigilante INTEGER NOT NULL, -- En realidad guarda el ID del usuario del sistema
+    id_vigilante INTEGER NOT NULL, 
     FOREIGN KEY (id_acceso) REFERENCES acceso(id_acceso) ON UPDATE CASCADE ON DELETE RESTRICT,
     FOREIGN KEY (id_vigilante) REFERENCES tmusuarios(nu) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- Tabla auditoria (CORREGIDA: Apunta a tmusuarios)
+-- Tabla auditoria
 CREATE TABLE auditoria (
     id_auditoria SERIAL PRIMARY KEY,
     fecha_hora TIMESTAMP NOT NULL DEFAULT NOW(),
     entidad VARCHAR(50) NOT NULL,
     id_entidad INTEGER NOT NULL,
     accion VARCHAR(50) NOT NULL,
-    id_usuario INTEGER NOT NULL, -- Guarda el ID del usuario del sistema
+    id_usuario INTEGER NOT NULL, 
     datos_previos TEXT,
     datos_nuevos TEXT,
     FOREIGN KEY (id_usuario) REFERENCES tmusuarios(nu) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- Correcciones
--- Agregamos la columna hora_salida a la tabla acceso 
-ALTER TABLE acceso 
-ADD COLUMN hora_salida TIMESTAMP DEFAULT NULL;
-
--- Insertamos una persona "comodín" para los invitados de eventos
--- Usamos un ID alto (ej. 9999) para evitar conflictos
-INSERT INTO persona (id_persona, doc_identidad, nombre, tipo_persona, estado)
-VALUES (9999, 'INVITADO', 'INVITADO EVENTO', 'VISITANTE', 1)
-ON CONFLICT (id_persona) DO NOTHING;
-
--- Aseguramos que la secuencia no intente usar ese ID
-SELECT setval('persona_id_persona_seq', (SELECT MAX(id_persona) FROM persona));
-
-INSERT INTO persona (id_persona, doc_identidad, nombre, tipo_persona, estado)
-VALUES (9999, 'INVITADO', 'INVITADO EVENTO', 'VISITANTE', 1)
-ON CONFLICT (id_persona) DO NOTHING;
-
--- Esto actualiza el contador al número más alto que exista actualmente en la tabla
-SELECT setval('evento_id_evento_seq', (SELECT MAX(id_evento) FROM evento));
-
+-- Tabla NOVEDAD (FALTABA EN TU SCRIPT)
+CREATE TABLE novedad (
+    id_novedad SERIAL PRIMARY KEY,
+    asunto VARCHAR(100) NOT NULL,
+    descripcion TEXT NOT NULL,
+    fecha_hora TIMESTAMP NOT NULL DEFAULT NOW(),
+    id_usuario INTEGER NOT NULL,
+    FOREIGN KEY (id_usuario) REFERENCES tmusuarios(nu) ON UPDATE CASCADE ON DELETE RESTRICT
+);
 
 -- 3. INSERCIÓN DE DATOS (DATA SEEDING)
 -- ====================================================================
 
-SELECT 'Paso 20: Insertando datos base...' AS paso, pg_sleep(1);
-
 -- Status
 INSERT INTO tmstatus (cods, dstatus) VALUES (0, 'ELIMINADO'), (1, 'ACTIVO');
 
--- Roles
+-- Roles (Admin y Vigilante)
 INSERT INTO rol (id_rol, nombre_rol) VALUES
-(1, 'Vigilante Principal'),
-(2, 'Vigilante Nocturno'),
-(3, 'Administrativo');
-SELECT pg_catalog.setval('public.rol_id_rol_seq', 3, true);
+(1, 'Administrador'),
+(2, 'Vigilante');
+SELECT pg_catalog.setval('public.rol_id_rol_seq', 2, true);
 
 -- Parqueaderos
-INSERT INTO parqueadero (id_parqueadero, nombre, capacidad) VALUES 
-(1, 'Principal', 100), 
-(2, 'Visitantes', 50);
+INSERT INTO parqueadero (id_parqueadero, nombre, capacidad) VALUES (1, 'Principal', 100), (2, 'Visitantes', 50);
 SELECT pg_catalog.setval('public.parqueadero_id_parqueadero_seq', 2, true);
 
 -- Puntos de Control
-INSERT INTO punto_de_control (id_punto, tipo, id_parqueadero) VALUES 
-(1, 'Entrada', 1), 
-(2, 'Salida', 1);
+INSERT INTO punto_de_control (id_punto, tipo, id_parqueadero) VALUES (1, 'Entrada', 1), (2, 'Salida', 1);
 SELECT pg_catalog.setval('public.punto_de_control_id_punto_seq', 2, true);
 
 -- Tarifas
@@ -279,19 +251,7 @@ INSERT INTO tarifa (id_tarifa, nombre, condiciones, regla, valor_base, unidad) V
 (2, 'Residente mensual', 'Tarifa fija mensual', 'Costo fijo', 50.00, 'Mes');
 SELECT pg_catalog.setval('public.tarifa_id_tarifa_seq', 2, true);
 
--- Vigilantes (Personal físico)
-INSERT INTO vigilante (id_vigilante, nombre, doc_identidad, telefono, estado, id_rol) VALUES
-(1, 'Carlos Rodriguez', '2000000001', '3001112233', 1, 1),
-(2, 'Ana Ramirez', '2000000002', '3104445566', 1, 2),
-(3, 'Juan', '1093456', '3218391710', 1, 1);
-SELECT pg_catalog.setval('public.vigilante_id_vigilante_seq', 3, true);
-
--- Turnos
-INSERT INTO turno (id_turno, fecha, hora_inicio, hora_fin, id_vigilante, id_parqueadero) VALUES
-(1, CURRENT_DATE, '07:00:00', '15:00:00', 1, 1);
-SELECT pg_catalog.setval('public.turno_id_turno_seq', 1, true);
-
--- USUARIOS DEL SISTEMA (Login)
+-- USUARIOS DEL SISTEMA (tmusuarios)
 INSERT INTO tmusuarios (nu, nombre, usuario, clave, nivel) VALUES
 (1, 'ANGIE', 'ADMIN@CARROS.COM', '12345', 1), 
 (2, 'LAURA', 'LAURAVIGI@ACCESO.COM', '54321', 0),
@@ -300,8 +260,25 @@ INSERT INTO tmusuarios (nu, nombre, usuario, clave, nivel) VALUES
 (5, 'IVALDO', 'IVALDO@ADMIN.COM', 'res001', 1);
 SELECT pg_catalog.setval('public.tmusuarios_nu_seq', 5, true);
 
--- PERSONAS (Datos Masivos)
+-- VIGILANTES (Sincronización inicial)
+-- Insertamos en 'vigilante' los mismos usuarios que en 'tmusuarios' para que aparezcan en el panel
+INSERT INTO vigilante (nombre, doc_identidad, telefono, id_rol, estado)
+VALUES
+('ANGIE', '1001', '3001234567', 1, 1),
+('LAURA', '1002', '3001234568', 2, 1),
+('FERNANDO', '1003', '3001234569', 2, 1),
+('DIEGO', '1004', '3001234570', 2, 1),
+('IVALDO', '1005', '3001234571', 1, 1);
+SELECT pg_catalog.setval('public.vigilante_id_vigilante_seq', 5, true);
+
+-- Turnos
+INSERT INTO turno (id_turno, fecha, hora_inicio, hora_fin, id_vigilante, id_parqueadero) VALUES
+(1, CURRENT_DATE, '07:00:00', '15:00:00', 1, 1);
+SELECT pg_catalog.setval('public.turno_id_turno_seq', 1, true);
+
+-- PERSONAS (Datos Masivos + INVITADO 9999)
 INSERT INTO persona (id_persona, doc_identidad, nombre, tipo_persona, estado) VALUES
+(9999, 'INVITADO', 'INVITADO EVENTO', 'VISITANTE', 1), -- INVITADO GENÉRICO
 (3, '1000000003', 'Pedro Gomez', 'ADMINISTRATIVO', 1),
 (4, '1000000004', 'Ana Torres', 'ESTUDIANTE', 1),
 (6, '1000000006', 'Sofia Castro', 'ESTUDIANTE', 1),
@@ -357,7 +334,7 @@ INSERT INTO persona (id_persona, doc_identidad, nombre, tipo_persona, estado) VA
 (54, '1234568998', 'Juan Mantilla', 'ESTUDIANTE', 0),
 (55, '1093740947', 'Jose Alejandro Morales Duarte', 'ESTUDIANTE', 1),
 (5, '1000000005', 'Pablo Rojas', 'DOCENTE', 1);
-SELECT pg_catalog.setval('public.persona_id_persona_seq', 55, true); 
+SELECT pg_catalog.setval('public.persona_id_persona_seq', 10000, true); 
 
 -- VEHÍCULOS (Datos Masivos)
 INSERT INTO vehiculo (id_vehiculo, placa, tipo, color, id_persona) VALUES
