@@ -51,7 +51,8 @@ from backend.core.controller_alertas import (
 from backend.models.auditoria import obtener_historial_auditoria
 from backend.models.dashboard_model import (
     obtener_ultimos_accesos, contar_total_vehiculos,
-    contar_alertas_activas, buscar_placa_bd
+    contar_alertas_activas, buscar_placa_bd,
+    obtener_ocupacion_real # <--- IMPORTANTE: Esta función se usa abajo
 )
 from backend.models.admin_model import (
     obtener_datos_dashboard,
@@ -89,7 +90,7 @@ def token_requerido(f):
     return decorador
 
 # ===========================================================
-# LOGIN
+# RUTAS PÚBLICAS & LOGIN
 # ===========================================================
 @app.route("/")
 def index(): return render_template("login.html")
@@ -113,45 +114,34 @@ def login():
     except Exception as e: return jsonify({"error": str(e)}), 500
 
 # ===========================================================
-# GESTIÓN DE PERSONAL (NUEVO CON AUDITORÍA)
+# RUTAS DASHBOARD VIGILANTE & OCUPACIÓN
 # ===========================================================
-@app.route("/api/admin/vigilantes", methods=["GET"])
-@token_requerido
-def list_vigilantes():
-    return jsonify(obtener_todos_vigilantes()), 200
 
-@app.route("/api/admin/registrar_vigilante", methods=["POST"])
-@token_requerido
-def api_registrar_vigilante():
-    try:
-        data = request.get_json()
-        if not data.get('usuario') or not data.get('clave'):
-            return jsonify({"error": "Usuario y Clave son obligatorios"}), 400
-        
-        # PASAMOS EL ID DEL ADMIN PARA AUDITORÍA
-        if registrar_vigilante_completo(data, request.usuario_actual['id_audit']):
-            return jsonify({"mensaje": "Personal registrado correctamente"}), 201
-        return jsonify({"error": "Error al registrar. Verifique duplicados."}), 500
-    except Exception as e: return jsonify({"error": str(e)}), 500
+# --- ESTA ERA LA RUTA QUE FALTABA Y CAUSABA EL 404 ---
+@app.route("/api/ocupacion", methods=["GET"])
+def api_ocupacion():
+    return jsonify(obtener_ocupacion_real())
+# -----------------------------------------------------
 
-@app.route("/api/admin/vigilantes/<int:id_vigilante>", methods=["PUT"])
-@token_requerido
-def update_vigilante_api(id_vigilante):
-    # PASAMOS EL ID DEL ADMIN PARA AUDITORÍA
-    if actualizar_vigilante_completo(id_vigilante, request.get_json(), request.usuario_actual['id_audit']):
-        return jsonify({"mensaje": "Actualizado correctamente"}), 200
-    return jsonify({"error": "No se pudo actualizar"}), 500
+@app.route("/api/ultimos_accesos", methods=["GET"])
+def api_ultimos_accesos():
+    return jsonify(obtener_ultimos_accesos())
 
-@app.route("/api/admin/vigilantes/<int:id_vigilante>", methods=["DELETE"])
-@token_requerido
-def delete_vigilante_api(id_vigilante):
-    # PASAMOS EL ID DEL ADMIN PARA AUDITORÍA
-    if eliminar_vigilante_completo(id_vigilante, request.usuario_actual['id_audit']):
-        return jsonify({"mensaje": "Eliminado correctamente"}), 200
-    return jsonify({"error": "No se pudo eliminar"}), 500
+@app.route("/api/total_vehiculos", methods=["GET"])
+def api_total_vehiculos():
+    return jsonify(contar_total_vehiculos())
+
+@app.route("/api/alertas_activas", methods=["GET"])
+def api_alertas_activas():
+    return jsonify(contar_alertas_activas())
+
+@app.route("/api/buscar_placa/<placa>", methods=["GET"])
+def api_buscar_placa(placa):
+    data = buscar_placa_bd(placa)
+    return jsonify(data) if data else (jsonify({"error": "No encontrada"}), 404)
 
 # ===========================================================
-# DASHBOARD ADMIN & REPORTES
+# RUTAS DASHBOARD ADMIN
 # ===========================================================
 @app.route("/api/admin/resumen", methods=["GET"])
 @token_requerido
@@ -165,6 +155,43 @@ def api_admin_accesos(): return jsonify(obtener_accesos_detalle())
 @token_requerido
 def api_admin_auditoria(): return jsonify(obtener_historial_auditoria()), 200
 
+# ===========================================================
+# GESTIÓN DE VIGILANTES / USUARIOS (CRUD)
+# ===========================================================
+@app.route("/api/admin/vigilantes", methods=["GET"])
+@token_requerido
+def list_vigilantes():
+    return jsonify(obtener_todos_vigilantes()), 200
+
+@app.route("/api/admin/registrar_vigilante", methods=["POST"])
+@token_requerido
+def api_registrar_vigilante():
+    try:
+        data = request.get_json()
+        if not data.get('usuario') or not data.get('clave'):
+            return jsonify({"error": "Usuario y Clave son obligatorios"}), 400
+        if registrar_vigilante_completo(data, request.usuario_actual['id_audit']):
+            return jsonify({"mensaje": "Vigilante registrado correctamente"}), 201
+        return jsonify({"error": "Error al registrar"}), 500
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/vigilantes/<int:id_vigilante>", methods=["PUT"])
+@token_requerido
+def update_vigilante_api(id_vigilante):
+    if actualizar_vigilante_completo(id_vigilante, request.get_json(), request.usuario_actual['id_audit']):
+        return jsonify({"mensaje": "Actualizado correctamente"}), 200
+    return jsonify({"error": "No se pudo actualizar"}), 500
+
+@app.route("/api/admin/vigilantes/<int:id_vigilante>", methods=["DELETE"])
+@token_requerido
+def delete_vigilante_api(id_vigilante):
+    if eliminar_vigilante_completo(id_vigilante, request.usuario_actual['id_audit']):
+        return jsonify({"mensaje": "Eliminado correctamente"}), 200
+    return jsonify({"error": "No se pudo eliminar"}), 500
+
+# ===========================================================
+# REPORTES GERENCIALES (EXCEL / PDF)
+# ===========================================================
 @app.route("/api/admin/exportar/excel", methods=["GET"])
 @token_requerido
 def exportar_excel():
@@ -177,7 +204,7 @@ def exportar_excel():
         ws_resumen = wb.active; ws_resumen.title = "Resumen"
         ws_resumen.append(["REPORTE", f"{fi} a {ff}"])
         stats = reporte["estadisticas"]
-        ws_resumen.append(["Total Movimientos", stats['total_movimientos']])
+        ws_resumen.append(["Movimientos", stats['total_movimientos']])
         ws_resumen.append(["Autorizados", stats['autorizados']])
         ws_resumen.append(["Denegados", stats['denegados']])
 
@@ -282,6 +309,7 @@ def delete_alerta(id_a):
         return jsonify({"mensaje": "Resuelta"}), 200
     return jsonify({"error": "Error"}), 500
 
+# Rutas Vigilante
 @app.route("/api/vigilante/estado-patio", methods=["GET"])
 @token_requerido
 def get_estado_patio(): return jsonify(obtener_estado_actual_patio()), 200
@@ -309,20 +337,7 @@ def post_reportar_incidente():
         return jsonify({"mensaje": "Reportado"}), 201
     return jsonify({"error": "Error"}), 500
 
-@app.route("/api/ultimos_accesos", methods=["GET"])
-def api_ultimos_accesos(): return jsonify(obtener_ultimos_accesos())
-
-@app.route("/api/total_vehiculos", methods=["GET"])
-def api_total_vehiculos(): return jsonify(contar_total_vehiculos())
-
-@app.route("/api/alertas_activas", methods=["GET"])
-def api_alertas_activas(): return jsonify(contar_alertas_activas())
-
-@app.route("/api/buscar_placa/<placa>", methods=["GET"])
-def api_buscar_placa(placa):
-    data = buscar_placa_bd(placa)
-    return jsonify(data) if data else (jsonify({"error": "No encontrada"}), 404)
-
+# Calendario
 @app.route("/api/eventos", methods=["GET", "POST"])
 @token_requerido
 def handle_eventos():
@@ -347,8 +362,12 @@ def verify_evento(id_e):
     verificar_evento_controller(id_e, request.get_json().get('verificado', True))
     return jsonify({"mensaje": "Verificado"}), 200
 
+# ===========================================================
+# STATIC & RUN
+# ===========================================================
 @app.route("/static/<path:filename>")
-def static_files(filename): return send_from_directory(app.static_folder, filename)
+def static_files(filename):
+    return send_from_directory(app.static_folder, filename)
 
 if __name__ == "__main__":
     print("✅ Servidor SmartCar ejecutándose en http://127.0.0.1:5000")
