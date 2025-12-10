@@ -22,7 +22,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'backend
 from backend.core.db.connection import get_connection
 from backend.models.user_model import verificar_usuario
 from backend.core.auditoria_utils import registrar_auditoria_global 
-
+from backend.core.pico_placa import verificar_pico_placa
 # Controladores
 from backend.core.controller_personas import (
     desactivar_persona_controller, obtener_personas_controller,
@@ -40,6 +40,7 @@ from backend.core.controller_calendario import (
     actualizar_evento_controller, eliminar_evento_controller,
     verificar_evento_controller
 )
+
 from backend.core.controller_incidencias import (
     obtener_vehiculos_en_patio, crear_incidente_manual,
     obtener_estado_actual_patio, crear_novedad_general,       
@@ -362,6 +363,10 @@ def verify_evento(id_e):
     verificar_evento_controller(id_e, request.get_json().get('verificado', True))
     return jsonify({"mensaje": "Verificado"}), 200
 
+@app.route("/api/pico-placa/<placa>", methods=["GET"])
+def api_pico_placa(placa):
+    resultado = verificar_pico_placa(placa)
+    return jsonify(resultado), 200
 # ===========================================================
 # STATIC & RUN
 # ===========================================================

@@ -1,230 +1,241 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { format, parse, startOfWeek, getDay } from 'date-fns';
-import { es } from 'date-fns/locale';
 import axios from 'axios';
+import { format, getDay, parse, startOfWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useCallback, useEffect, useState } from 'react';
+import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useNavigate } from 'react-router-dom';
 
+// Configuración de localización
 const locales = { 'es': es };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
-const API_URL = 'http://127.0.0.1:5000/api';
+
+// Configuración de URL (Funciona en Local y Nube)
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 const CalendarioVigilante = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState([]);
-  const [filteredEvents, setFilteredEvents] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  // --- ESTADOS DE NAVEGACIÓN (CRUCIALES PARA QUE LOS BOTONES FUNCIONEN) ---
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState('month');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [currentView, setCurrentView] = useState(Views.MONTH);
 
+  // Estados de datos
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  
+  // Estados para Pico y Placa
+  const [placaCheck, setPlacaCheck] = useState('');
+  const [picoInfo, setPicoInfo] = useState(null);
+
+  // 1. CARGA DE EVENTOS
   const fetchEvents = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/eventos`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API_URL}/eventos`, { 
+        headers: { Authorization: `Bearer ${token}` } 
       });
+      
+      // Convertir fechas de String ISO a Objeto Date JS
       const parsedEvents = response.data.map(evt => ({
         ...evt,
         start: new Date(evt.start),
         end: new Date(evt.end),
+        title: evt.titulo
       }));
       setEvents(parsedEvents);
-      setFilteredEvents(parsedEvents);
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("Error cargando eventos:", err); 
+    }
   }, []);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-  // Filtrado por búsqueda
-  useEffect(() => {
-    const results = events.filter(event =>
-      event.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.categoria?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredEvents(results);
-  }, [searchTerm, events]);
-
+  // Manejadores de interacción
+  const handleSelectEvent = (event) => setSelectedEvent(event);
   const handleNavigate = (newDate) => setCurrentDate(newDate);
   const handleViewChange = (newView) => setCurrentView(newView);
 
-  const handleSelectEvent = (event) => {
-    setSelectedEvent(event);
-    setShowModal(true);
+  // 2. CONSULTA PICO Y PLACA (CÚCUTA)
+  const checkPicoPlaca = async (e) => {
+      e.preventDefault();
+      if(!placaCheck) return;
+      try {
+          const res = await axios.get(`${API_URL}/pico-placa/${placaCheck}`);
+          setPicoInfo(res.data);
+      } catch (error) { 
+          // Si falla la API, mensaje por defecto
+          setPicoInfo({restriccion: false, mensaje: "Error de conexión. Verifique manualmente."});
+      }
   };
-
-  const handleVerify = async () => {
-    if (!selectedEvent) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/eventos/${selectedEvent.id_evento}/verificar`, 
-        { verificado: true }, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("✅ Evento marcado como verificado/en curso.");
-      setShowModal(false);
-      fetchEvents();
-    } catch (err) { alert("Error al verificar evento"); }
-  };
-
-  const eventStyleGetter = (event) => {
-    let backgroundColor = '#dc3545';
-    if (event.categoria === 'Mantenimiento') backgroundColor = '#d63384';
-    if (event.categoria === 'Institucional') backgroundColor = '#0d6efd';
-    
-    const style = { backgroundColor, borderRadius: '4px', border: 'none', color: 'white', fontSize: '0.85rem' };
-    if (event.verificado) {
-        style.border = "2px solid #00ff00";
-        style.boxShadow = "0 0 5px #00ff00";
-    }
-    return { style };
-  };
-
-  const upcomingEvents = events.filter(e => e.start >= new Date()).sort((a, b) => a.start - b.start).slice(0, 3);
 
   return (
-    // LAYOUT PRINCIPAL FULL SCREEN
-    <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#f8f9fa' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* Estilos Inyectados */}
+      {/* ESTILOS INYECTADOS PARA BOTONES */}
       <style>{`
-        .rbc-calendar { font-family: 'Poppins', sans-serif; }
-        .rbc-header { padding: 10px 0; font-weight: 700; font-size: 1rem; background-color: #f8f9fa; color: #495057; text-transform: uppercase; }
-        .rbc-month-view { border-radius: 12px; overflow: hidden; border: 1px solid #e3e6f0; box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.15); }
-        .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #e3e6f0; }
-        .rbc-off-range-bg { background-color: #f8f9fc; }
-        .rbc-date-cell { padding: 8px; font-weight: 600; font-size: 1rem; color: #5a5c69; }
-        .rbc-today { background-color: #fff3cd; }
-        .rbc-event { min-height: 25px; }
-        .rbc-toolbar button { color: #5a5c69; font-weight: 600; border: 1px solid #d1d3e2; }
-        .rbc-toolbar button:hover { background-color: #eaecf4; color: #2e59d9; }
-        .rbc-toolbar button.rbc-active { background-color: #4e73df; color: white; box-shadow: none; border-color: #4e73df; }
+        .rbc-toolbar button { border: 1px solid #ddd; color: #555; }
+        .rbc-toolbar button:hover { background-color: #f8f9fa; color: #000; }
+        .rbc-toolbar button.rbc-active { background-color: #b91c1c !important; color: white !important; border-color: #b91c1c !important; }
+        .rbc-today { background-color: #fff5f5 !important; }
+        .rbc-event { border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border:none; }
       `}</style>
 
-      {/* 1. HEADER */}
-      <div className="bg-white shadow-sm border-bottom px-4 py-3 d-flex justify-content-between align-items-center" style={{ flexShrink: 0 }}>
-        <h1 className="h4 mb-0 fw-bold text-dark">
-            <i className="fas fa-calendar-check me-2 text-success"></i>
-            Calendario Operativo
-        </h1>
-        <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate('/vigilante/gestion')}>Volver</button>
+      {/* HEADER */}
+      <div className="bg-white shadow-sm border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 className="h4 mb-0 fw-bold text-dark">Agenda Operativa</h1>
+            <small className="text-muted">Consulta de eventos y restricciones</small>
+        </div>
+        <button className="btn btn-outline-secondary btn-sm" onClick={() => navigate('/vigilante/gestion')}>
+            <i className="fas fa-arrow-left me-2"></i> Volver
+        </button>
       </div>
 
-      {/* 2. CONTENEDOR DE CONTENIDO */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="flex-grow-1 d-flex bg-light overflow-hidden">
         
-        {/* A. SIDEBAR IZQUIERDO (Solo Lectura) */}
-        <div className="bg-white border-end p-3 overflow-auto" style={{ width: '320px', minWidth: '320px', display: 'flex', flexDirection: 'column' }}>
+        {/* SIDEBAR IZQUIERDA */}
+        <div className="bg-white border-end p-3 d-flex flex-column gap-3 overflow-auto" style={{ width: '320px', minWidth: '320px' }}>
             
-            {/* Buscador */}
-            <div className="mb-4">
-              <label className="form-label fw-bold text-secondary small">BUSCAR</label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0"><i className="fas fa-search text-muted"></i></span>
-                <input type="text" className="form-control bg-light border-start-0" placeholder="Título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-              </div>
+            {/* WIDGET PICO Y PLACA CÚCUTA */}
+            <div className="card shadow-sm border-0 bg-danger text-white">
+                <div className="card-body p-3">
+                    <h6 className="fw-bold border-bottom border-white pb-2 mb-3">
+                        <i className="fas fa-traffic-light me-2"></i>Pico y Placa (Cúcuta)
+                    </h6>
+                    <form onSubmit={checkPicoPlaca}>
+                        <div className="input-group mb-2">
+                            <input 
+                                type="text" 
+                                className="form-control text-uppercase fw-bold text-center border-0 text-danger" 
+                                placeholder="ABC-123" 
+                                value={placaCheck} 
+                                onChange={e=>setPlacaCheck(e.target.value.toUpperCase())} 
+                                maxLength={6} 
+                            />
+                            <button className="btn btn-light fw-bold text-danger" type="submit">VER</button>
+                        </div>
+                    </form>
+                    
+                    {picoInfo ? (
+                        <div className={`rounded p-2 text-center fw-bold text-small ${picoInfo.restriccion ? 'bg-white text-danger' : 'bg-success text-white'}`}>
+                            {picoInfo.restriccion ? '🚫 RESTRICCIÓN' : '✅ HABILITADO'}
+                            <div className="small fw-normal mt-1">{picoInfo.mensaje}</div>
+                        </div>
+                    ) : (
+                        <div className="small opacity-75 text-center mt-2" style={{fontSize: '0.8rem'}}>
+                            Lunes (1-2), Martes (3-4), Miér (5-6), Jue (7-8), Vie (9-0). <br/> <b>7am - 7pm</b>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Lista Próximos (Sin botón de crear) */}
-            <h6 className="fw-bold text-uppercase text-secondary small mb-3">Próximos Eventos</h6>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-                {upcomingEvents.length === 0 ? (
-                    <div className="text-muted small fst-italic text-center py-3">Sin eventos próximos.</div>
+            <hr className="my-2"/>
+
+            {/* LISTA DE PRÓXIMOS EVENTOS */}
+            <h6 className="text-secondary fw-bold small text-uppercase mb-2">Próximos Eventos</h6>
+            <div className="flex-grow-1 overflow-auto pe-1">
+                {events.length === 0 ? (
+                    <p className="text-muted small text-center italic py-4">No hay eventos programados.</p>
                 ) : (
-                    upcomingEvents.map(evt => (
-                    <div key={evt.id_evento} 
-                        className="card text-white mb-3 shadow-sm border-0 cursor-pointer" 
-                        style={{ background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5253 100%)' }} 
-                        onClick={() => handleSelectEvent(evt)}
-                    >
-                        <div className="card-body p-3">
-                            <h6 className="fw-bold mb-0" style={{fontSize: '0.9rem'}}>
-                                {evt.start instanceof Date ? format(evt.start, 'd MMM', { locale: es }).toUpperCase() : ''}
-                            </h6>
-                            <p className="small mb-0 text-white-50 text-truncate">{evt.titulo}</p>
-                            <span className="badge bg-white text-danger mt-2">{evt.start instanceof Date ? format(evt.start, 'HH:mm') : ''}</span>
+                    events
+                    .filter(e => e.start >= new Date()) // Solo futuros
+                    .sort((a,b) => a.start - b.start)   // Ordenar por fecha
+                    .slice(0, 5)                        // Solo los 5 siguientes
+                    .map(e => (
+                        <div key={e.id_evento} className="card mb-2 border-0 shadow-sm border-start-4 border-start-danger cursor-pointer hover-shadow" onClick={() => setSelectedEvent(e)}>
+                            <div className="card-body p-2">
+                                <div className="fw-bold text-dark small">{e.title}</div>
+                                <div className="d-flex justify-content-between mt-1 align-items-center">
+                                    <span className="text-muted" style={{fontSize: '0.75rem'}}>
+                                        <i className="far fa-calendar me-1"></i>
+                                        {e.start.toLocaleDateString()}
+                                    </span>
+                                    <span className={`badge ${e.categoria === 'Mantenimiento' ? 'bg-danger' : 'bg-light text-dark border'}`} style={{fontSize: '0.65rem'}}>
+                                        {e.categoria.substring(0, 8)}...
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                     ))
                 )}
             </div>
         </div>
 
-        {/* B. ÁREA DEL CALENDARIO */}
-        <div style={{ flex: 1, padding: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div className="card shadow-sm border-0 h-100 w-100">
+        {/* CALENDARIO */}
+        <div className="flex-grow-1 p-4 h-100 overflow-hidden">
+            <div className="card shadow-sm border-0 h-100">
                 <div className="card-body p-0 h-100">
                     <Calendar
                         localizer={localizer}
-                        events={filteredEvents}
+                        events={events}
                         startAccessor="start"
                         endAccessor="end"
+                        style={{ height: '100%' }}
+                        
+                        // --- ESTO HACE QUE LOS BOTONES FUNCIONEN ---
                         date={currentDate}
                         view={currentView}
-                        onNavigate={setCurrentDate}
-                        onView={setCurrentView}
-                        style={{ height: '100%', width: '100%' }}
-                        messages={{ next: "Sig", previous: "Ant", today: "Hoy", month: "Mes", week: "Semana", day: "Día", agenda: "Agenda" }}
+                        onNavigate={handleNavigate}
+                        onView={handleViewChange}
+                        // -------------------------------------------
+
+                        messages={{ next: "Sig", previous: "Ant", today: "Hoy", month: "Mes", week: "Semana", day: "Día", agenda: "Lista" }}
                         culture='es'
-                        onSelectEvent={handleSelectEvent} // Solo seleccionar
-                        eventPropGetter={eventStyleGetter}
+                        onSelectEvent={handleSelectEvent} // Solo ver detalle
+                        eventPropGetter={(event) => {
+                            let bg = '#0d6efd'; // Azul por defecto
+                            if (event.categoria === 'Mantenimiento') bg = '#dc3545'; // Rojo
+                            if (event.categoria === 'Evento Masivo') bg = '#ffc107'; // Amarillo
+                            return { 
+                                style: { 
+                                    backgroundColor: bg, 
+                                    color: event.categoria === 'Evento Masivo' ? 'black' : 'white',
+                                    fontSize: '0.85rem'
+                                } 
+                            };
+                        }}
                     />
                 </div>
             </div>
         </div>
-
       </div>
 
-      {/* --- MODAL DE DETALLES (SOLO LECTURA) --- */}
-      {showModal && selectedEvent && (
-        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000 }}>
+      {/* MODAL DETALLE (SOLO LECTURA) */}
+      {selectedEvent && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 2000 }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
-              <div className="modal-header bg-dark text-white py-2">
-                <h5 className="modal-title fs-6 fw-bold">{selectedEvent.titulo}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title fw-bold"><i className="fas fa-info-circle me-2"></i>Detalle del Evento</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setSelectedEvent(null)}></button>
               </div>
               <div className="modal-body p-4">
-                <div className="d-flex justify-content-between mb-3">
-                    <span className="badge bg-secondary">{selectedEvent.categoria}</span>
-                    {selectedEvent.verificado ? (
-                        <span className="badge bg-success">✅ Verificado</span>
-                    ) : (
-                        <span className="badge bg-warning text-dark">⚠️ Pendiente</span>
-                    )}
-                </div>
+                <h5 className="fw-bold mb-3">{selectedEvent.title}</h5>
                 
-                <div className="mb-3">
-                    <strong className="d-block text-secondary small mb-1">UBICACIÓN</strong>
-                    <p className="mb-0 fw-bold">{selectedEvent.ubicacion || 'No especificada'}</p>
-                </div>
-
                 <div className="row mb-3">
                     <div className="col-6">
-                        <strong className="d-block text-secondary small mb-1">INICIO</strong>
-                        <p className="mb-0">{selectedEvent.start.toLocaleString()}</p>
+                        <label className="small fw-bold text-muted d-block">INICIO</label>
+                        <span className="fs-6">{selectedEvent.start.toLocaleString()}</span>
                     </div>
                     <div className="col-6">
-                        <strong className="d-block text-secondary small mb-1">FIN</strong>
-                        <p className="mb-0">{selectedEvent.end.toLocaleString()}</p>
+                        <label className="small fw-bold text-muted d-block">FIN</label>
+                        <span className="fs-6">{selectedEvent.end.toLocaleString()}</span>
                     </div>
                 </div>
-                
-                <div className="bg-light p-3 rounded border">
-                    <strong className="d-block text-secondary small mb-1">DESCRIPCIÓN</strong>
-                    <p className="mb-0 text-muted">{selectedEvent.descripcion || 'Sin descripción adicional.'}</p>
+
+                <div className="mb-3">
+                    <label className="small fw-bold text-muted d-block">UBICACIÓN</label>
+                    <span>{selectedEvent.ubicacion || 'General'}</span>
+                </div>
+
+                <div className="bg-light p-3 rounded border-start border-4 border-danger">
+                    <label className="small fw-bold text-muted d-block mb-1">DESCRIPCIÓN</label>
+                    <p className="mb-0 fst-italic text-dark">{selectedEvent.descripcion || 'Sin descripción adicional.'}</p>
                 </div>
               </div>
-              
-              <div className="modal-footer bg-light py-2">
-                <button type="button" className="btn btn-sm btn-secondary" onClick={() => setShowModal(false)}>Cerrar</button>
-                {!selectedEvent.verificado && (
-                    <button type="button" className="btn btn-sm btn-success fw-bold" onClick={handleVerify}>
-                        <i className="fas fa-check me-2"></i> Confirmar Inicio
-                    </button>
-                )}
+              <div className="modal-footer bg-light">
+                <button className="btn btn-secondary w-100 fw-bold" onClick={() => setSelectedEvent(null)}>Cerrar</button>
               </div>
             </div>
           </div>
