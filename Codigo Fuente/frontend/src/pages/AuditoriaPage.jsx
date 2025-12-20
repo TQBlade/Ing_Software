@@ -190,7 +190,7 @@ const AuditoriaPage = () => {
                                 className="btn btn-outline-secondary w-100"
                                 onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); setCurrentPage(1); }}
                             >
-                                Limpiar
+                                Limpiar Filtro
                             </button>
                         </div>
                     </div>
